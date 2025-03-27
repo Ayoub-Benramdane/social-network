@@ -64,32 +64,29 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
-		response := map[string]string{"error": "Invalid email or password"}
+		response := map[string]string{"error": "Password is incorrect"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	// Generate a new session token
 	sessionToken, err := uuid.NewV4()
 	if err != nil {
 		log.Printf("Error generating session token: %v", err)
-		response := map[string]string{"error": "Internal server error"}
+		response := map[string]string{"error": "Failed to generate session token"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	// Update the session token in the database
 	if err := database.UpdateSession(login.Email, sessionToken); err != nil {
 		log.Printf("Error updating session token: %v", err)
-		response := map[string]string{"error": "Internal server error"}
+		response := map[string]string{"error": "Failed to update session token"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	// Set a cookie with the session token
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),
@@ -155,7 +152,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	sessionToken, err := uuid.NewV4()
 	if err != nil {
 		log.Printf("Error generating session token: %v", err)
-		response := map[string]string{"error": "Internal server error"}
+		response := map[string]string{"error": "Failed to generate session token"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return

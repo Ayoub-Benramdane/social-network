@@ -6,6 +6,8 @@ CREATE TABLE
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        total_likes INTEGER DEFAULT 0,
+        total_comments INTEGER DEFAULT 0,
         privacy TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (session_token) ON DELETE CASCADE
     );

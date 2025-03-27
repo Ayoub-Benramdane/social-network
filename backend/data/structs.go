@@ -7,33 +7,41 @@ import (
 )
 
 type User struct {
-	ID           int64
-	Username     string
-	FirstName    string
-	LastName     string
-	Email        string
-	DateOfBirth  time.Time
-	Password     []byte
-	SessionToken uuid.UUID
+	ID             int64
+	Username       string
+	FirstName      string
+	LastName       string
+	Email          string
+	DateOfBirth    time.Time
+	Password       []byte
+	CreatedAt      time.Time
+	ProfileImage   string
+	Bio            string
+	TotalPosts     int64
+	TotalLikes     int64
+	TotalComments  int64
+	TotalFollowers int64
+	TotalFollowing int64
+	SessionToken   uuid.UUID
 }
 
 type Post struct {
-	ID        int
-	Title     string
-	Content   string
-	Author    string
-	Category  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Comments  []Comment
+	ID            int64
+	Title         string
+	Content       string
+	Author        string
+	Categories    []string
+	CreatedAt     string
+	TotalLikes    int
+	TotalComments int
+	Comments      []Comment
 }
 
 type Comment struct {
 	ID        int
 	Content   string
 	Author    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt string
 }
 
 type Category struct {

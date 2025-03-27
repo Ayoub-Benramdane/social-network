@@ -11,6 +11,8 @@ CREATE TABLE
         avater TEXT,
         about TEXT,
         session_token TEXT NOT NULL,
+        followers INTEGER DEFAULT 0,
+        following INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
