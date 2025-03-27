@@ -38,7 +38,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors, valid := ValidateInputLogin(login.Email, login.Password)
+	errors, valid := ValidateInput("", "", "", login.Email, login.Password, time.Now())
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -131,7 +131,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors, valid := ValidateInputRegister(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.DateOfBirth)
+	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.DateOfBirth)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -217,84 +217,13 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func ValidateInputLogin(email, password string) (map[string]string, bool) {
+func ValidateInput(username, firstName, lastName, email, password string, date time.Time) (map[string]string, bool) {
 	errors := make(map[string]string)
-	const maxEmail = 20
-	const maxPassword = 20
-
-	// ✅ Validation de l'email
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	if len(email) == 0 {
-		errors["email"] = "Email cannot be empty"
-	} else if len(email) > maxEmail {
-		errors["email"] = fmt.Sprintf("Email cannot be longer than %d characters.", maxEmail)
-	} else if !emailRegex.MatchString(email) {
-		errors["email"] = "Invalid email format"
-	}
-
-	// ✅ Validation du mot de passe
-	if len(password) < 8 {
-		errors["password"] = "Password must be at least 8 characters long"
-	} else if len(password) > maxPassword {
-		errors["password"] = fmt.Sprintf("Password cannot be longer than %d characters.", maxPassword)
-	} else {
-		hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
-		hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
-		hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
-		hasSpecial := regexp.MustCompile(`[\W_]`).MatchString(password)
-
-		if !hasUpper {
-			errors["password"] = "Password must include at least one uppercase letter"
-		} else if !hasLower {
-			errors["password"] = "Password must include at least one lowercase letter"
-		} else if !hasDigit {
-			errors["password"] = "Password must include at least one digit"
-		} else if !hasSpecial {
-			errors["password"] = "Password must include at least one special character"
-		}
-	}
-
-	// Retour des erreurs
-	if len(errors) > 0 {
-		log.Println(errors)
-		return errors, false
-	}
-	return nil, true
-}
-
-func ValidateInputRegister(username, firstName, lastName, email, password string, date time.Time) (map[string]string, bool) {
-	errors := make(map[string]string)
-
 	const maxUsername = 10
 	const maxEmail = 20
 	const maxPassword = 20
 	const maxNameLength = 20
 
-	// ✅ Validation du prénom
-	if len(firstName) == 0 {
-		errors["first_name"] = "First name cannot be empty"
-	} else if len(firstName) > maxNameLength {
-		errors["first_name"] = fmt.Sprintf("First name cannot be longer than %d characters.", maxNameLength)
-	} else if !isAlphabetic(firstName) {
-		errors["first_name"] = "First name must contain only letters"
-	}
-
-	// ✅ Validation du nom
-	if len(lastName) == 0 {
-		errors["last_name"] = "Last name cannot be empty"
-	} else if len(lastName) > maxNameLength {
-		errors["last_name"] = fmt.Sprintf("Last name cannot be longer than %d characters.", maxNameLength)
-	} else if !isAlphabetic(lastName) {
-		errors["last_name"] = "Last name must contain only letters"
-	}
-
-	// ✅ Validation du username
-	if len(username) == 0 {
-		errors["username"] = "Username cannot be empty"
-	} else if len(username) > maxUsername {
-		errors["username"] = fmt.Sprintf("Username cannot be longer than %d characters.", maxUsername)
-	}
-
 	// ✅ Validation de l'email
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if len(email) == 0 {
@@ -327,17 +256,44 @@ func ValidateInputRegister(username, firstName, lastName, email, password string
 		}
 	}
 
-	// ✅ Validation de la date
-	if date.IsZero() {
-		errors["date"] = "Date cannot be empty"
-	} else {
-		now := time.Now()
-		year1900 := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+	if username != "" {
+		// ✅ Validation du prénom
+		if len(firstName) == 0 {
+			errors["first_name"] = "First name cannot be empty"
+		} else if len(firstName) > maxNameLength {
+			errors["first_name"] = fmt.Sprintf("First name cannot be longer than %d characters.", maxNameLength)
+		} else if !isAlphabetic(firstName) {
+			errors["first_name"] = "First name must contain only letters"
+		}
 
-		if date.After(now) {
-			errors["date"] = "Date cannot be in the future"
-		} else if date.Before(year1900) {
-			errors["date"] = "Date cannot be before the year 1900"
+		// ✅ Validation du nom
+		if len(lastName) == 0 {
+			errors["last_name"] = "Last name cannot be empty"
+		} else if len(lastName) > maxNameLength {
+			errors["last_name"] = fmt.Sprintf("Last name cannot be longer than %d characters.", maxNameLength)
+		} else if !isAlphabetic(lastName) {
+			errors["last_name"] = "Last name must contain only letters"
+		}
+
+		// ✅ Validation du username
+		if len(username) == 0 {
+			errors["username"] = "Username cannot be empty"
+		} else if len(username) > maxUsername {
+			errors["username"] = fmt.Sprintf("Username cannot be longer than %d characters.", maxUsername)
+		}
+
+		// ✅ Validation de la date
+		if date.IsZero() {
+			errors["date"] = "Date cannot be empty"
+		} else {
+			now := time.Now()
+			year1900 := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+
+			if date.After(now) {
+				errors["date"] = "Date cannot be in the future"
+			} else if date.Before(year1900) {
+				errors["date"] = "Date cannot be before the year 1900"
+			}
 		}
 	}
 
