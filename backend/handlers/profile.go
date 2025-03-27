@@ -15,7 +15,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	user, err := GetUserFromSession(r)
-	if err != nil {
+	if err != nil || user == nil {
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)

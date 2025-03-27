@@ -20,7 +20,9 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	var post struct {
 		Title      string   `json:"title"`
 		Content    string   `json:"content"`
+		Image      string   `json:"image"`
 		Categories []string `json:"category"`
+		Privacy    string   `json:"privacy"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&post)
@@ -32,14 +34,14 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := GetUserFromSession(r)
-	if err != nil {
+	if err != nil || user == nil {
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Categories)
+	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Image, post.Privacy)
 	if err != nil {
 		log.Printf("Database error: %v", err)
 		response := map[string]string{"error": "Failed to create post"}
@@ -53,12 +55,14 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		Author:        user.Username,
 		Title:         html.EscapeString(post.Title),
 		Content:       html.EscapeString(post.Content),
-		Categories:    post.Categories,
+		Image:         post.Image,
 		CreatedAt:     "Just Now",
+		Privacy:       post.Privacy,
 		TotalLikes:    0,
 		TotalComments: 0,
 		Comments:      nil,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(newPost)
 }
@@ -72,14 +76,22 @@ func GetPostsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := GetUserFromSession(r)
-	if err != nil {
+	if err != nil || user == nil {
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	posts, err := database.GetPosts(user.ID)
+	followers, err := database.GetFollowers(user.ID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve followers"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	posts, err := database.GetPosts(user.ID, followers)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve posts"}
 		w.WriteHeader(http.StatusInternalServerError)

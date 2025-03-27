@@ -29,12 +29,13 @@ type Post struct {
 	ID            int64
 	Title         string
 	Content       string
+	Image         string
 	Author        string
-	Categories    []string
 	CreatedAt     string
 	TotalLikes    int
 	TotalComments int
 	Comments      []Comment
+	Privacy       string
 }
 
 type Comment struct {
