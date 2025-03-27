@@ -25,6 +25,11 @@ func UpdateSession(Email string, sessionToken uuid.UUID) error {
 
 func GetUserConnected(token string) (structs.User, error) {
 	var user structs.User
-	err := DB.QueryRow("SELECT id FROM users WHERE token = ?", token).Scan(&user.ID)
+	err := DB.QueryRow("SELECT id, session_token FROM users WHERE token = ?", token).Scan(&user.ID, &user.SessionToken)
 	return user, err
+}
+
+func DeleteSession(user_id int64) error {
+	_, err := DB.Exec("UPDATE users SET session_token = NULL WHERE id = ?", user_id)
+	return err
 }

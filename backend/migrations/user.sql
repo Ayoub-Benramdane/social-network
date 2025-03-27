@@ -10,7 +10,7 @@ CREATE TABLE
         password TEXT NOT NULL,
         avater TEXT,
         about TEXT,
-        session_token TEXT NOT NULL,
+        session_token TEXT,
         followers INTEGER DEFAULT 0,
         following INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP

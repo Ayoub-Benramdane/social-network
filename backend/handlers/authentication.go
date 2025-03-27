@@ -181,71 +181,41 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-// 	cookie, err := r.Cookie("session_token")
-// 	if err != nil {
-// 		http.Error(w, "You are not logged in", http.StatusBadRequest)
-// 		return
-// 	}
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
-// 	// Remove the session from the session store
-// 	delete(sessionStore, cookie.Value)
+	user, err := GetUserFromSession(r)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
-// 	// Expire the cookie
-// 	http.SetCookie(w, &http.Cookie{
-// 		Name:    "session_token",
-// 		Value:   "guest",
-// 		Expires: time.Now().Add(-1 * time.Hour),
-// 	})
-// 	http.Redirect(w, r, "/", http.StatusSeeOther)
-// 	fmt.Fprintln(w, "You have been logged out.")
-// }
+	if err := database.DeleteSession(user.ID); err != nil {
+		log.Printf("Error deleting session: %v", err)
+		response := map[string]string{"error": "Failed to delete session"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
-// func RequireLogin(w http.ResponseWriter, r *http.Request) (string, string, bool, error) {
-// 	cookie, _ := r.Cookie("session_token")
-// 	if cookie == nil {
-// 		return "", "guest", false, nil
-// 	}
+	http.SetCookie(w, &http.Cookie{
+		Name:   "session_token",
+		Value:  "guest",
+		MaxAge: -1,
+	})
 
-// 	var username, sessionToken string
-// 	err := database.DB.QueryRow("SELECT username, session_token FROM users WHERE session_token = ?", cookie.Value).Scan(&username, &sessionToken)
-// 	if err == sql.ErrNoRows {
-// 		cookies := r.Cookies()
-// 		// Loop through the cookies and expire them
-// 		for _, cookie := range cookies {
-// 			http.SetCookie(w, &http.Cookie{
-// 				Name:    cookie.Name,
-// 				Value:   "",
-// 				Expires: time.Now().Add(-1 * time.Hour),
-// 				// MaxAge:  -1,
-// 			})
-// 		}
-// 		return "", "guest", false, err
-// 	} else if err != nil {
-// 		log.Printf("Database error: %v", err)
-// 		http.Error(w, "Internal server error.", http.StatusInternalServerError)
-// 		return "", "guest", false, err
-// 	}
-
-// 	return username, sessionToken, true, nil
-// }
-
-// func CheckSessionHandler(w http.ResponseWriter, r *http.Request) {
-// 	_, _, loggedIn, err := RequireLogin(w, r)
-// 	// fmt.Println("sessionGuest1:", sessionGuest)
-// 	if err != nil {
-// 		fmt.Println("Error in the RequiredLogin !!! :", err)
-// 		return
-// 	}
-// 	w.Header().Set("Content-Type", "application/json")
-// 	if loggedIn {
-// 		w.WriteHeader(http.StatusOK)
-// 		fmt.Fprintln(w, `{"loggedIn": true}`)
-// 	} else {
-// 		w.WriteHeader(http.StatusOK)
-// 		fmt.Fprintln(w, `{"loggedIn": false}`)
-// 	}
-// }
+	response := map[string]string{"message": "Logout successful!", "username": user.Username}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
 
 func ValidateInputLogin(email, password string) (map[string]string, bool) {
 	errors := make(map[string]string)
