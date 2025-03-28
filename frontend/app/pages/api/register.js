@@ -1,8 +1,5 @@
 "use client";
 
-
-
-
 export default async function RegisterHandler() {
   const response = await fetch("http://localhost:8404/register", {
     method: "POST",

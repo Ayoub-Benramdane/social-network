@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"html"
 	"log"
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
+	"time"
 )
 
-func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
+func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -17,15 +17,14 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post struct {
-		Title      string   `json:"title"`
-		Content    string   `json:"content"`
-		Image      string   `json:"image"`
-		Categories []string `json:"category"`
-		Privacy    string   `json:"privacy"`
+	var group struct {
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		Image       string         `json:"image"`
+		Members     []structs.User `json:"members"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&post)
+	err := json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -41,33 +40,30 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Image, post.Privacy)
+	id, err := database.CreateGroup(user.ID, group.Name, group.Description, group.Image)
 	if err != nil {
 		log.Printf("Database error: %v", err)
-		response := map[string]string{"error": "Failed to create post"}
+		response := map[string]string{"error": "Failed to create group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	newPost := structs.Post{
-		ID:            id,
-		Author:        user.Username,
-		Title:         html.EscapeString(post.Title),
-		Content:       html.EscapeString(post.Content),
-		Image:         post.Image,
-		CreatedAt:     "Just Now",
-		Privacy:       post.Privacy,
-		TotalLikes:    0,
-		TotalComments: 0,
-		Comments:      nil,
+	newGroup := structs.Group{
+		ID:          id,
+		Name:        group.Name,
+		Description: group.Description,
+		Image:       group.Image,
+		CreatedAt:   time.Now(),
+		Admin:       user.Username,
+		Members:     group.Members,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(newPost)
+	json.NewEncoder(w).Encode(newGroup)
 }
 
-func PostHandler(w http.ResponseWriter, r *http.Request) {
+func GroupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -83,8 +79,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post_id int64 
-	err = json.NewDecoder(r.Body).Decode(&post_id)
+	var group_id int64
+	err = json.NewDecoder(r.Body).Decode(&group_id)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -92,21 +88,14 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := database.GetPost(post_id)
+	groups, err := database.GetGroup(group_id)
 	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve post"}
+		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	if post.Privacy == "private" || post.Privacy == "almost_private" && post.Author != user.Username {
-		response := map[string]string{"error": "You are not authorized to view this post"}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(groups)
 }

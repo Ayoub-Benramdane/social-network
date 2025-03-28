@@ -30,7 +30,7 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./app"))
 	http.Handle("/app/", http.StripPrefix("/app", fileServer))
 
-	http.HandleFunc("/", handlers.GetPostsHandler)
+	http.HandleFunc("/", handlers.Home)
 	http.HandleFunc("/session", handlers.SessionHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
@@ -44,6 +44,11 @@ func main() {
 	http.HandleFunc("/unfollow", handlers.UnfollowHandler)
 	http.HandleFunc("/followers", handlers.FollowersHandler)
 	http.HandleFunc("/following", handlers.FollowingHandler)
+	http.HandleFunc("/new_group", handlers.CreateGrpoupHandler)
+	http.HandleFunc("/group", handlers.GroupHandler)
+	// http.HandleFunc("/notifications", handlers.NotificationsHandler)
+	// http.HandleFunc("/notifications/mark_as_read", handlers.MarkNotificationsAsReadHandler)
+	// http.HandleFunc("/notifications/mark_all_as_read", handlers.MarkAllNotificationsAsReadHandler)
 	// http.HandleFunc("/search", handlers.SearchHandler)
 	// http.HandleFunc("/ws", handlers.WebSocketHandler)
 

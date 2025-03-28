@@ -49,3 +49,13 @@ type Category struct {
 	ID   int64
 	Name string
 }
+
+type Group struct {
+	ID          int64
+	Name        string
+	Image       string
+	Description string
+	CreatedAt   time.Time
+	Admin       string
+	Members     []User
+}

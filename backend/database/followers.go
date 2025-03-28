@@ -47,3 +47,21 @@ func GetFollowing(user_id int64) ([]structs.User, error) {
 	}
 	return following, nil
 }
+
+func GetNotFollowing(user_id int64) ([]structs.User, error) {
+	rows, err := DB.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT follower_id FROM followers WHERE following_id = ?) AND id != ?", user_id, user_id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var notFollowing []structs.User
+	for rows.Next() {
+		var user structs.User
+		err = rows.Scan(&user.ID, &user.Username)
+		if err != nil {
+			return nil, err
+		}
+		notFollowing = append(notFollowing, user)
+	}
+	return notFollowing, nil
+}
