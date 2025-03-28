@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"social-network/backend/database"
+	"social-network/database"
 )
 
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {

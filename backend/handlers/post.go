@@ -5,8 +5,8 @@ import (
 	"html"
 	"log"
 	"net/http"
-	structs "social-network/backend/data"
-	"social-network/backend/database"
+	structs "social-network/data"
+	"social-network/database"
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +91,14 @@ func GetPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	followers, err = database.GetFollowers(user.ID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve followers"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	posts, err := database.GetPosts(user.ID, followers)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve posts"}
@@ -101,4 +109,13 @@ func GetPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
+}
+
+func PostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 }

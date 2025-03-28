@@ -13,23 +13,20 @@ var DB *sql.DB
 // InitDB initializes the database and applies migrations
 func InitDB() error {
 	var err error
-	DB, err = sql.Open("sqlite3", "./backend/data/forum.db")
+	DB, err = sql.Open("sqlite3", "./data/forum.db")
 	if err != nil {
 		return err
 	}
 
 	// Apply migrations
-	if err := applyMigrations(); err != nil {
-		return err
-	}
-
-	return nil
+	err = applyMigrations()
+	return err
 }
 
 // applyMigrations applies all migrations to the database
 func applyMigrations() error {
 	m := &migrate.FileMigrationSource{
-		Dir: "./backend/migrations",
+		Dir: "./migrations",
 	}
 
 	// Run migrations

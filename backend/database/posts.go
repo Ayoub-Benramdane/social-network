@@ -1,7 +1,7 @@
 package database
 
 import (
-	structs "social-network/backend/data"
+	structs "social-network/data"
 	"time"
 )
 

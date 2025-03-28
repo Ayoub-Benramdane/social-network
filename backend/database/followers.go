@@ -1,6 +1,6 @@
 package database
 
-import structs "social-network/backend/data"
+import structs "social-network/data"
 
 func AddFollow(follower_id, following_id int64) error {
 	_, err := DB.Exec("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)

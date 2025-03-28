@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	database "social-network/backend/database"
-	handlers "social-network/backend/handlers"
+	database "social-network/database"
+	handlers "social-network/handlers"
 
 	"github.com/rs/cors"
 )
@@ -30,18 +30,20 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./app"))
 	http.Handle("/app/", http.StripPrefix("/app", fileServer))
 
-	// http.HandleFunc("/", handlers.HomePage)
-	// http.HandleFunc("/show_posts", handlers.ShowPosts)
-	// http.HandleFunc("/post_submit", handlers.PostSubmit)
-	// http.HandleFunc("/comment_submit", handlers.CommentSubmit)
-	// http.HandleFunc("/interact", handlers.HandleInteract)
-	// http.HandleFunc("/get_categories", handlers.GetCategories)
-	// http.HandleFunc("/Connections", handlers.Connections)
-
+	http.HandleFunc("/", handlers.GetPostsHandler)
+	http.HandleFunc("/session", handlers.SessionHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
-	// http.HandleFunc("/check-session", auth.CheckSessionHandler)
-	// http.HandleFunc("/logout", auth.LogoutHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
+	http.HandleFunc("/logout", handlers.LogoutHandler)
+	http.HandleFunc("/profile", handlers.ProfileHandler)
+	http.HandleFunc("/new_post", handlers.CreatePostHandler)
+	http.HandleFunc("/post", handlers.PostHandler)
+	// http.HandleFunc("/comment", handlers.CommentHandler)
+	// http.HandleFunc("/like", handlers.LikeHandler)
+	// http.HandleFunc("/follow", handlers.FollowHandler)
+	// http.HandleFunc("/unfollow", handlers.UnfollowHandler)
+	// http.HandleFunc("/search", handlers.SearchHandler)
+	// http.HandleFunc("/ws", handlers.WebSocketHandler)
 
 	log.Println("Server started on :8404")
 	fmt.Println("http://localhost:8404/")

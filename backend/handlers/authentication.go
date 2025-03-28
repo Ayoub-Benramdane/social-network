@@ -11,7 +11,7 @@ import (
 	"time"
 	"unicode"
 
-	"social-network/backend/database"
+	"social-network/database"
 
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -107,13 +107,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var register struct {
-		Username        string    `json:"username"`
-		FirstName       string    `json:"firstName"`
-		LastName        string    `json:"lastName"`
-		Email           string    `json:"email"`
-		DateOfBirth     time.Time `json:"dateOfBirth"`
-		Password        string    `json:"password"`
-		ConfirmPassword string    `json:"confirmPassword"`
+		Username          string    `json:"username"`
+		FirstName         string    `json:"firstName"`
+		LastName          string    `json:"lastName"`
+		Email             string    `json:"email"`
+		DateOfBirth       time.Time `json:"dateOfBirth"`
+		Password          string    `json:"password"`
+		ConfirmedPassword string    `json:"confirmedPassword"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&register)
@@ -124,7 +124,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if register.Password != register.ConfirmPassword {
+	if register.Password != register.ConfirmedPassword {
 		response := map[string]string{"error": "Passwords do not match"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -220,7 +220,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 func ValidateInput(username, firstName, lastName, email, password string, date time.Time) (map[string]string, bool) {
 	errors := make(map[string]string)
 	const maxUsername = 10
-	const maxEmail = 20
+	const maxEmail = 30
 	const maxPassword = 20
 	const maxNameLength = 20
 

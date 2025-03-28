@@ -1,14 +1,14 @@
 package database
 
 import (
-	structs "social-network/backend/data"
+	structs "social-network/data"
 	"time"
 
 	"github.com/gofrs/uuid"
 )
 
 func RegisterUser(Username, FirstName, LastName, Email string, hashedPassword []byte, DateOfBirth time.Time, sessionToken uuid.UUID) error {
-	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, date_of_birth, password, created_at, session_token) VALUES (?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, DateOfBirth, hashedPassword, time.Now(), sessionToken)
+	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, date_of_birth, password, created_at, session_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, DateOfBirth, hashedPassword, time.Now(), sessionToken)
 	return err
 }
 
