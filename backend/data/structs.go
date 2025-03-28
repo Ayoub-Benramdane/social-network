@@ -32,20 +32,20 @@ type Post struct {
 	Image         string
 	Author        string
 	CreatedAt     string
-	TotalLikes    int
-	TotalComments int
+	TotalLikes    int64
+	TotalComments int64
 	Comments      []Comment
 	Privacy       string
 }
 
 type Comment struct {
-	ID        int
+	ID        int64
 	Content   string
 	Author    string
 	CreatedAt string
 }
 
 type Category struct {
-	ID   int
+	ID   int64
 	Name string
 }

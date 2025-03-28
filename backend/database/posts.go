@@ -47,6 +47,16 @@ func GetPosts(id int64, followers []structs.User) ([]structs.Post, error) {
 	return posts, nil
 }
 
+func GetPost(post_id int64) (structs.Post, error) {
+	var post structs.Post
+	err := DB.QueryRow("SELECT posts.id, posts.title, posts.content, users.username, posts.created_at, post.total_likes, post.total_comments FROM posts JOIN users ON posts.user_id = users.id WHERE posts.id = ?",post_id).Scan(&post.ID, &post.Title, &post.Content, &post.Author, &post.CreatedAt, &post.TotalLikes, &post.TotalComments)
+	if err != nil {
+		return structs.Post{}, err
+	}
+	post.Comments, err = GetPostComments(post_id)
+	return post, nil
+}
+
 func GetCountUserPosts(id int64) (int64, error) {
 	var count int64
 	err := DB.QueryRow("SELECT COUNT(*) FROM posts WHERE user_id = ?", id).Scan(&count)

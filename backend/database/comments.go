@@ -6,9 +6,9 @@ import (
 )
 
 func CreateComment(content string, user_id, post_id int64) (int64, error) {
-	result, errInsert := DB.Exec("INSERT INTO comments (content, user_id, post_id, created_at) VALUES (?, ?, ?, ?)", content, user_id, post_id, time.Now())
-	if errInsert != nil {
-		return 0, errInsert
+	result, err := DB.Exec("INSERT INTO comments (content, user_id, post_id, created_at) VALUES (?, ?, ?, ?)", content, user_id, post_id, time.Now())
+	if err != nil {
+		return 0, err
 	}
 	lastID, err := result.LastInsertId()
 	return lastID, err
