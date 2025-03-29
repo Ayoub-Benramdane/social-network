@@ -1,18 +1,15 @@
 -- +migrate Up
 CREATE TABLE
-    IF NOT EXISTS posts (
+    IF NOT EXISTS notifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
+        notified_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        category TEXT NOT NULL,
-        image TEXT,
+        type_notification TEXT NOT NULL,
+        read BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        total_likes INTEGER DEFAULT 0,
-        total_comments INTEGER DEFAULT 0,
-        privacy TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
 -- +migrate Down
-DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS notifications;

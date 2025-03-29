@@ -18,11 +18,11 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var post struct {
-		Title      string   `json:"title"`
-		Content    string   `json:"content"`
-		Image      string   `json:"image"`
-		Categories []string `json:"category"`
-		Privacy    string   `json:"privacy"`
+		Title     string `json:"title"`
+		Content   string `json:"content"`
+		Image     string `json:"image"`
+		Category string `json:"category"`
+		Privacy   string `json:"privacy"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&post)
@@ -41,7 +41,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Image, post.Privacy)
+	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Category, post.Image, post.Privacy)
 	if err != nil {
 		log.Printf("Database error: %v", err)
 		response := map[string]string{"error": "Failed to create post"}
@@ -83,7 +83,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post_id int64 
+	var post_id int64
 	err = json.NewDecoder(r.Body).Decode(&post_id)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}

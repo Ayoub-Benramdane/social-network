@@ -29,6 +29,7 @@ type Post struct {
 	ID            int64
 	Title         string
 	Content       string
+	Category      string
 	Image         string
 	Author        string
 	CreatedAt     string
@@ -58,4 +59,23 @@ type Group struct {
 	CreatedAt   time.Time
 	Admin       string
 	Members     []User
+}
+
+type Message struct {
+	ID        int64
+	Sender    int64
+	Recipient int64
+	Content   string
+	CreatedAt time.Time
+	Read      bool
+}
+
+type Notification struct {
+	ID               int64
+	UserID           int64
+	NotifiedUser     int64
+	Content          string
+	TypeNotification string
+	CreatedAt        time.Time
+	Read             bool
 }

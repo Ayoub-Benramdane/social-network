@@ -18,6 +18,14 @@ func InitDB() error {
 		return err
 	}
 
+	// Enable foreign key support
+	_, err = DB.Exec(`
+        PRAGMA foreign_keys = ON
+    `)
+	if err != nil {
+		return err
+	}
+
 	// Apply migrations
 	err = applyMigrations()
 	return err
