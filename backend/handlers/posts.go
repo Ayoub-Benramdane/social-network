@@ -10,33 +10,71 @@ import (
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		NewPostGet(w, r, user)
+	case http.MethodPost:
+		NewPostPost(w, r, user)
+	default:
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+}
 
+func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
+	categories, err := database.GetCategories()
+	if err != nil {
+		log.Printf("Error retrieving categories: %v", err)
+		response := map[string]string{"error": "Failed to retrieve categories"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	users, err := database.GetFollowing(user.ID)
+	if err != nil {
+		log.Printf("Error retrieving users: %v", err)
+		response := map[string]string{"error": "Failed to retrieve users"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	data := struct {
+		Categories []structs.Category
+		Users      []structs.User
+	}{
+		Categories: categories,
+		Users:      users,
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+	return
+}
+
+func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	var post struct {
-		Title     string `json:"title"`
-		Content   string `json:"content"`
-		Image     string `json:"image"`
+		Title    string `json:"title"`
+		Content  string `json:"content"`
+		Image    string `json:"image"`
 		Category string `json:"category"`
-		Privacy   string `json:"privacy"`
+		Privacy  string `json:"privacy"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
-		response := map[string]string{"error": "Failed to retrieve user"}
-		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
 	}

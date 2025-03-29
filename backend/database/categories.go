@@ -24,7 +24,7 @@ func CheckCategory() *structs.Category {
 	return &cat
 }
 
-func GetAllCategorys() ([]structs.Category, error) {
+func GetCategories() ([]structs.Category, error) {
 	rows, err := DB.Query("SELECT name FROM categories")
 	if err != nil {
 		return nil, err

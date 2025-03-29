@@ -28,7 +28,12 @@ func InitDB() error {
 
 	// Apply migrations
 	err = applyMigrations()
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Create Categories table
+	return CreateCategoryies()
 }
 
 // applyMigrations applies all migrations to the database
