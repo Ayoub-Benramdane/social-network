@@ -8,13 +8,13 @@ import (
 )
 
 func RegisterUser(Username, FirstName, LastName, Email string, hashedPassword []byte, DateOfBirth time.Time, sessionToken uuid.UUID) error {
-	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, date_of_birth, password, session_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, DateOfBirth, hashedPassword, sessionToken)
+	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, date_of_birth, password, session_token) VALUES (?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, DateOfBirth, hashedPassword, sessionToken)
 	return err
 }
 
 func GetUserByEmail(email string) (structs.User, error) {
 	var user structs.User
-	err := DB.QueryRow("SELECT password, session_token FROM users WHERE email = ?", email).Scan(&user.Password, &user.SessionToken)
+	err := DB.QueryRow("SELECT username, password, session_token FROM users WHERE email = ?", email).Scan(&user.Username, &user.Password, &user.SessionToken)
 	return user, err
 }
 
@@ -25,7 +25,7 @@ func UpdateSession(Email string, sessionToken uuid.UUID) error {
 
 func GetUserConnected(token string) (structs.User, error) {
 	var user structs.User
-	err := DB.QueryRow("SELECT id, session_token FROM users WHERE token = ?", token).Scan(&user.ID, &user.SessionToken)
+	err := DB.QueryRow("SELECT id, username, session_token FROM users WHERE token = ?", token).Scan(&user.ID, &user.Username, &user.SessionToken)
 	return user, err
 }
 

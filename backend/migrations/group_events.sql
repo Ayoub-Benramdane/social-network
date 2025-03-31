@@ -2,9 +2,9 @@
 CREATE TABLE
     IF NOT EXISTS group_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        group_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
+        group_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
         description TEXT NOT NULL,
         start_date DATETIME NOT NULL,
         end_date DATETIME NOT NULL,

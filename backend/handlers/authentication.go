@@ -88,14 +88,22 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionToken.String(),
-		Expires: time.Now().Add(1 * time.Hour),
+		Name:     "session_token",
+		Value:    sessionToken.String(),
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
 
-	response := map[string]string{"message": "Login successful!", "username": user.Username, "token": sessionToken.String()}
+	data := map[string]interface{}{
+		"username":  user.Username,
+		"sessionToken": sessionToken.String(),
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(data)
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {

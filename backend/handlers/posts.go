@@ -17,6 +17,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+	
 	switch r.Method {
 	case http.MethodGet:
 		NewPostGet(w, r, user)
@@ -40,7 +41,7 @@ func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		return
 	}
 
-	users, err := database.GetFollowing(user.ID)
+	users, err := database.GetFollowers(user.ID)
 	if err != nil {
 		log.Printf("Error retrieving users: %v", err)
 		response := map[string]string{"error": "Failed to retrieve users"}
@@ -56,24 +57,39 @@ func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		Categories: categories,
 		Users:      users,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 	return
 }
 
 func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
-	var post struct {
-		Title    string `json:"title"`
-		Content  string `json:"content"`
-		Image    string `json:"image"`
-		Category string `json:"category"`
-		Privacy  string `json:"privacy"`
-	}
-
+	var post structs.Post
 	err := json.NewDecoder(r.Body).Decode(&post)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if post.Title == "" || len(post.Title) > 20 {
+		response := map[string]string{"error": "Post title is required and must be less than 20 characters"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if post.Content == "" || len(post.Content) > 500 {
+		response := map[string]string{"error": "Post content is required and must be less than 500 characters"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if post.Category == "" {
+		response := map[string]string{"error": "Post category is required"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if post.Privacy == "" {
+		response := map[string]string{"error": "Post privacy is required"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return

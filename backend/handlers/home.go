@@ -23,30 +23,6 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	followers, err := database.GetFollowers(user.ID)
-	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve followers"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	followers, err = database.GetFollowers(user.ID)
-	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve followers"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	posts, err := database.GetPosts(user.ID, followers)
-	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve posts"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
 	following, err := database.GetFollowing(user.ID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve followings"}
@@ -58,6 +34,22 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	not_following, err := database.GetNotFollowing(user.ID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve not following"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	posts, err := database.GetPosts(user.ID, following)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve posts"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	best_categories, err := database.GetBestCategories()
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve best categories"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -79,22 +71,52 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	invitations_friends, err := database.GetInvitationsFriends(user.ID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve invitations"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	invitations_groups, err := database.GetInvitationsGroups(user.ID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve invitations"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	Events, err := database.GetEvents()
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve events"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	var home = struct {
-		User         *structs.User   `json:"user"`
-		Posts        []structs.Post  `json:"posts"`
-		MyGroups     []structs.Group `json:"groups"`
-		OtherGroups  []structs.Group `json:"other_groups"`
-		Followers    []structs.User  `json:"followers"`
-		Following    []structs.User  `json:"following"`
-		NotFollowing []structs.User  `json:"not_following"`
+		User               *structs.User        `json:"user"`
+		Posts              []structs.Post       `json:"posts"`
+		BestCategories     []structs.Category   `json:"best_categories"`
+		MyGroups           []structs.Group      `json:"groups"`
+		OtherGroups        []structs.Group      `json:"other_groups"`
+		Following          []structs.User       `json:"following"`
+		NotFollowing       []structs.User       `json:"not_following"`
+		InvitationsFriends []structs.Invitation `json:"invitations_friends"`
+		InvitationsGroups  []structs.Invitation `json:"invitations_groups"`
+		Events             []structs.Event      `json:"events"`
 	}{
-		User:         user,
-		Posts:        posts,
-		MyGroups:     my_groups,
-		OtherGroups:  other_groups,
-		Followers:    followers,
-		Following:    following,
-		NotFollowing: not_following,
+		User:               user,
+		Posts:              posts,
+		BestCategories:     best_categories,
+		MyGroups:           my_groups,
+		OtherGroups:        other_groups,
+		Following:          following,
+		NotFollowing:       not_following,
+		InvitationsFriends: invitations_friends,
+		InvitationsGroups:  invitations_groups,
+		Events:             Events,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

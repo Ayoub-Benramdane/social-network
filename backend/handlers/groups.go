@@ -6,7 +6,6 @@ import (
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
-	"time"
 )
 
 func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,13 +16,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var group struct {
-		Name        string         `json:"name"`
-		Description string         `json:"description"`
-		Image       string         `json:"image"`
-		Members     []structs.User `json:"members"`
-	}
-
+	var group structs.Group
 	err := json.NewDecoder(r.Body).Decode(&group)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
@@ -40,6 +33,20 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if group.Name == "" || len(group.Name) > 20{
+		response := map[string]string{"error": "Group name is required and must be less than 20 characters"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if group.Description == "" || len(group.Description) > 100 {
+		response := map[string]string{"error": "Group description is required and must be less than 100 characters"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+
+
 	id, err := database.CreateGroup(user.ID, group.Name, group.Description, group.Image)
 	if err != nil {
 		log.Printf("Database error: %v", err)
@@ -54,9 +61,6 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		Name:        group.Name,
 		Description: group.Description,
 		Image:       group.Image,
-		CreatedAt:   time.Now(),
-		Admin:       user.Username,
-		Members:     group.Members,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

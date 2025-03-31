@@ -19,6 +19,7 @@ func main() {
 		AllowedOrigins: []string{"http://localhost:3000"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"Content-Type"},
+		AllowCredentials: true,
 	})
 
 	// Initialize the database

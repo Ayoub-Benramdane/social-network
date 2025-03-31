@@ -15,11 +15,7 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var comment struct {
-		PostID  int64  `json:"postId"`
-		Content string `json:"content"`
-	}
-
+	var comment structs.Comment
 	err := json.NewDecoder(r.Body).Decode(&comment)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
@@ -36,6 +32,13 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if comment.Content == "" || len(comment.Content) > 100 {
+		response := map[string]string{"error": "Comment content is required and must be less than 100 characters"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	id, err := database.CreateComment(comment.Content, user.ID, comment.PostID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to create comment"}
@@ -46,6 +49,7 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	newComment := structs.Comment{
 		ID:        id,
+		PostID:    comment.PostID,
 		Content:   comment.Content,
 		Author:    user.Username,
 		CreatedAt: "Just Now",

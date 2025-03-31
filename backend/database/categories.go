@@ -40,3 +40,20 @@ func GetCategories() ([]structs.Category, error) {
 	}
 	return categories, nil
 }
+
+func GetBestCategories() ([]structs.Category, error) {
+	rows, err := DB.Query("SELECT c.name FROM categories c JOIN (SELECT category_id, COUNT(*) as count FROM posts GROUP BY category_id ORDER BY count DESC LIMIT 5) p ON c.id = p.category_id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var categories []structs.Category
+	for rows.Next() {
+		var category structs.Category
+		if err := rows.Scan(&category.Name); err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+	return categories, nil
+}
