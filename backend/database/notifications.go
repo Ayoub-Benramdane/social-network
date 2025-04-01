@@ -44,3 +44,19 @@ func DeleteNotification(user_id, post_id, post_user_id int64, type_notification 
 	}
 	return nil
 }
+
+func MarkNotificationAsRead(user_id, notfication_id int64) error {
+	_, err := DB.Exec("UPDATE notifications SET read = 1 WHERE user_id = ? AND id = ?", user_id, notfication_id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MarkAllNotificationsAsRead(user_id int64) error {
+	_, err := DB.Exec("UPDATE notifications SET read = 1 WHERE user_id = ?", user_id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -8,6 +8,3 @@ CREATE TABLE
         FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
         UNIQUE (follower_id, following_id)
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS follows;

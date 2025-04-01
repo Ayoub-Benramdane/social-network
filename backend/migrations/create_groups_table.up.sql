@@ -8,6 +8,3 @@ CREATE TABLE
         admin INTEGER NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS groups;

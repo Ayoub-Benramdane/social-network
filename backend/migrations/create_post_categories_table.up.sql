@@ -8,6 +8,3 @@ CREATE TABLE
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
         UNIQUE (category_id, post_id)
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS categories;

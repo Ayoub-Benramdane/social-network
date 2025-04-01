@@ -8,6 +8,3 @@ CREATE TABLE
         FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
         UNIQUE (user_id, post_id)
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS post_likes;

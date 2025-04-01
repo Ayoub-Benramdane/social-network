@@ -1,6 +1,6 @@
 -- +migrate Up
 CREATE TABLE
-    IF NOT EXISTS invitations_grooups (
+    IF NOT EXISTS invitations_groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         sender_id INTEGER NOT NULL,
         recipient_id INTEGER NOT NULL,
@@ -11,6 +11,3 @@ CREATE TABLE
         FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
         UNIQUE (sender_id, recipient_id, group_id)
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS invitations;

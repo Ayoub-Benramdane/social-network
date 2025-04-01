@@ -45,3 +45,11 @@ func GetInvitationsGroups(user_id int64) ([]structs.Invitation, error) {
 	}
 	return invitations, nil
 }
+
+func DeleteInvitation(user_id, invited_id int64) error {
+	_, err := DB.Exec("DELETE FROM invitations WHERE user_id = ? AND invited_id = ?", user_id, invited_id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

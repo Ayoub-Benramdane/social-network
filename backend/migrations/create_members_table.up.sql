@@ -8,6 +8,3 @@ CREATE TABLE
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         UNIQUE (group_id, user_id)
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS members;

@@ -15,6 +15,3 @@ CREATE TABLE
         following INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
--- +migrate Down
-DROP TABLE IF EXISTS users;
