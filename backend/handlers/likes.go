@@ -31,7 +31,15 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := database.LikePost(user.ID, post_id)
+	post, err := database.GetPost(post_id)
+	if err != nil {
+		response := map[string]string{"error": "Post not found"}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	count, err := database.LikePost(user.ID, post)
 	if err != nil {
 		response := map[string]string{"error": "Error liking post"}
 		w.WriteHeader(http.StatusInternalServerError)

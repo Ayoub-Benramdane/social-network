@@ -33,7 +33,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if group.Name == "" || len(group.Name) > 20{
+	if group.Name == "" || len(group.Name) > 20 {
 		response := map[string]string{"error": "Group name is required and must be less than 20 characters"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -44,8 +44,6 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-
-
 
 	id, err := database.CreateGroup(user.ID, group.Name, group.Description, group.Image)
 	if err != nil {
@@ -92,7 +90,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := database.GetGroup(group_id)
+	group, err := database.GetGroup(group_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -100,6 +98,22 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	events, err := database.GetEventGroup(group_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve events"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	data := struct {
+		Group  structs.Group
+		Events []structs.Event
+	}{
+		Group:  group,
+		Events: events,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(groups)
+	json.NewEncoder(w).Encode(data)
 }

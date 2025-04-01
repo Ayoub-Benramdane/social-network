@@ -28,6 +28,7 @@ type User struct {
 type Post struct {
 	ID            int64     `json:"id" sqlite:"id"`
 	Title         string    `json:"title" sqlite:"title"`
+	UserID        int64     `json:"user_id" sqlite:"user_id"`
 	Content       string    `json:"content" sqlite:"content"`
 	Category      string    `json:"category" sqlite:"category"`
 	Image         string    `json:"image" sqlite:"image"`
@@ -63,19 +64,20 @@ type Group struct {
 }
 
 type Message struct {
-	ID        int64     `json:"id" sqlite:"id"`
-	Sender    int64     `json:"sender" sqlite:"sender"`
-	Recipient int64     `json:"recipient" sqlite:"recipient"`
-	Content   string    `json:"content" sqlite:"content"`
-	CreatedAt time.Time `json:"created_at" sqlite:"created_at"`
-	Read      bool      `json:"read" sqlite:"read"`
+	ID                int64     `json:"id" sqlite:"id"`
+	SenderID          int64     `json:"sender_id" sqlite:"sender_id"`
+	SenderUsername    string    `json:"sender_username" sqlite:"sender_username"`
+	ReceiverID       string    `json:"receiver_id" sqlite:"receiver_id"`
+	ReceiverUsername int64     `json:"receiver_username" sqlite:"receiver_username"`
+	Content           string    `json:"content" sqlite:"content"`
+	CreatedAt         time.Time `json:"created_at" sqlite:"created_at"`
+	Read              bool      `json:"read" sqlite:"read"`
 }
 
 type Notification struct {
 	ID               int64     `json:"id" sqlite:"id"`
 	UserID           int64     `json:"user_id" sqlite:"user_id"`
 	NotifiedUser     int64     `json:"notified_user" sqlite:"notified_user"`
-	Content          string    `json:"content" sqlite:"content"`
 	TypeNotification string    `json:"type_notification" sqlite:"type_notification"`
 	CreatedAt        time.Time `json:"created_at" sqlite:"created_at"`
 	Read             bool      `json:"read" sqlite:"read"`

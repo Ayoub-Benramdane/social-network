@@ -4,7 +4,7 @@ CREATE TABLE
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         notified_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
+        post_id INTEGER,
         type_notification TEXT NOT NULL,
         read BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

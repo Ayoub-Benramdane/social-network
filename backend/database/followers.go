@@ -4,6 +4,11 @@ import structs "social-network/data"
 
 func AddFollower(follower_id, following_id int64) error {
 	_, err := DB.Exec("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)
+	if err == nil {
+		if err = CreateNotification(follower_id, 0, following_id, "follow"); err != nil {
+			return err
+		}
+	}
 	return err
 }
 

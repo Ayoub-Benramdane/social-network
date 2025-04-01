@@ -87,7 +87,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Events, err := database.GetEvents()
+	Events, err := database.GetEvents(user.ID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve events"}
 		w.WriteHeader(http.StatusInternalServerError)

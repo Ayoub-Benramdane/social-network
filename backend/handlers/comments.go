@@ -39,7 +39,15 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := database.CreateComment(comment.Content, user.ID, comment.PostID)
+	post, err := database.GetPost(comment.PostID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve post"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	id, err := database.CreateComment(comment.Content, user.ID, post)
 	if err != nil {
 		response := map[string]string{"error": "Failed to create comment"}
 		w.WriteHeader(http.StatusInternalServerError)

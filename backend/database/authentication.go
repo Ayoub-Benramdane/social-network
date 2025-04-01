@@ -18,6 +18,12 @@ func GetUserByEmail(email string) (structs.User, error) {
 	return user, err
 }
 
+func CheckUser(user_id int64) (structs.User, error) {
+	var user structs.User
+	err := DB.QueryRow("SELECT username, password, session_token FROM users WHERE id = ?", user_id).Scan(&user.Username, &user.Password, &user.SessionToken)
+	return user, err
+}
+
 func UpdateSession(Email string, sessionToken uuid.UUID) error {
 	_, err := DB.Exec("UPDATE users SET session_token = ? WHERE email = ?", sessionToken, Email)
 	return err
