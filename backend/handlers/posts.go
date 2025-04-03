@@ -7,6 +7,7 @@ import (
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
+	"strconv"
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +18,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		NewPostGet(w, r, user)
@@ -73,31 +74,37 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		return
 	}
 
-	if post.Title == "" || len(post.Title) > 20 {
-		response := map[string]string{"error": "Post title is required and must be less than 20 characters"}
+	errors, valid := ValidatePost(post.Title, post.Content, post.Category, post.Privacy)
+	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":  "Validation error",
+			"fields": errors,
+		})
 		return
-	} else if post.Content == "" || len(post.Content) > 500 {
-		response := map[string]string{"error": "Post content is required and must be less than 500 characters"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	} else if post.Category == "" {
-		response := map[string]string{"error": "Post category is required"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	} else if post.Privacy == "" {
-		response := map[string]string{"error": "Post privacy is required"}
-		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	var imagePath string
+	image, header, err := r.FormFile("postImage")
+	if err != nil && err.Error() != "http: no such file" {
+		response := map[string]string{"error": "Failed to retrieve image"}
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Category, post.Image, post.Privacy)
+	if image != nil {
+		imagePath, err = SaveImage(image, header, "./data/images/")
+		if err != nil {
+			response := map[string]string{"error": err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Category, imagePath, post.Privacy)
 	if err != nil {
-		log.Printf("Database error: %v", err)
 		response := map[string]string{"error": "Failed to create post"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -163,4 +170,41 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
+}
+
+func ValidatePost(title, content, category, privacy string) (map[string]string, bool) {
+	errors := make(map[string]string)
+	const maxTitle = 20
+	const maxContent = 300
+	const maxCategory = 20
+
+	if title == "" {
+		errors["title"] = "Title is required"
+	} else if len(title) > maxTitle {
+		errors["title"] = "Title must be less than " + strconv.Itoa(maxTitle) + " characters"
+	}
+
+	if content == "" {
+		errors["content"] = "Content is required"
+	} else if len(content) > maxContent {
+		errors["content"] = "Content must be less than " + strconv.Itoa(maxContent) + " characters"
+	}
+
+	if category == "" {
+		errors["category"] = "Category is required"
+	} else if len(category) > maxCategory {
+		errors["category"] = "Category must be less than " + strconv.Itoa(maxCategory) + " characters"
+	}
+
+	if privacy == "" {
+		errors["privacy"] = "Privacy is required"
+	} else if privacy != "public" && privacy != "private" && privacy != "almost_private" {
+		errors["privacy"] = "Privacy must be public, private, or almost_private"
+	}
+
+	if len(errors) > 0 {
+		return errors, false
+	}
+
+	return nil, true
 }

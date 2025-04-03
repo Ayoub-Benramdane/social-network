@@ -13,7 +13,7 @@ var DB *sql.DB
 // InitDB initializes the database and applies migrations
 func InitDB() error {
 	var err error
-	DB, err = sql.Open("sqlite3", "./data/forum.db")
+	DB, err = sql.Open("sqlite3", "./data/social-network.db")
 	if err != nil {
 		return err
 	}

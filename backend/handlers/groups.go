@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
@@ -45,9 +44,27 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := database.CreateGroup(user.ID, group.Name, group.Description, group.Image)
+	var imagePath string
+	image, header, err := r.FormFile("postImage")
+	if err != nil && err.Error() != "http: no such file" {
+		response := map[string]string{"error": "Failed to retrieve image"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if image != nil {
+		imagePath, err = SaveImage(image, header, "./data/groups/")
+		if err != nil {
+			response := map[string]string{"error": err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	id, err := database.CreateGroup(user.ID, group.Name, group.Description, imagePath)
 	if err != nil {
-		log.Printf("Database error: %v", err)
 		response := map[string]string{"error": "Failed to create group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)

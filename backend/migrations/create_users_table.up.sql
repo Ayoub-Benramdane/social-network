@@ -8,7 +8,7 @@ CREATE TABLE
         email TEXT UNIQUE NOT NULL,
         date_of_birth DATE NOT NULL,
         password TEXT NOT NULL,
-        avater TEXT,
+        avater TEXT NOT NULL,
         about TEXT,
         session_token TEXT,
         followers INTEGER DEFAULT 0,

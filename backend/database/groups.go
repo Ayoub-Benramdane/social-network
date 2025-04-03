@@ -5,14 +5,11 @@ import (
 )
 
 func CreateGroup(admin int64, name, description, image string) (int64, error) {
-	result, err := DB.Exec("INSERT INTO groups (name, description, image, admin, ) VALUES (?, ?)", name, description)
+	result, err := DB.Exec("INSERT INTO groups (name, description, image, admin) VALUES (?, ?, ?, ?)", name, description, image, admin)
 	if err != nil {
 		return 0, err
 	}
 	group_id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
 	return group_id, nil
 }
 
@@ -77,16 +74,16 @@ func GetGroup(group_id int64) (structs.Group, error) {
 	return group, nil
 }
 
-func GetGroupMembers(group_id int64) ([]structs.User, error) {
+func GetGroupMembers(group_id, user_id int64) ([]structs.User, error) {
 	var members []structs.User
-	rows, err := DB.Query("SELECT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN members m ON u.id = m.user_id WHERE m.group_id = ?", group_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN members m ON u.id = m.user_id WHERE m.group_id = ? AND u.id != ?", group_id, user_id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var member structs.User
-		err = rows.Scan(&member.ID, &member.Username, &member.FirstName, &member.LastName, &member.ProfileImage)
+		err = rows.Scan(&member.ID, &member.Username, &member.FirstName, &member.LastName, &member.Avatar)
 		if err != nil {
 			return nil, err
 		}

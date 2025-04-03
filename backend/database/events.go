@@ -8,23 +8,18 @@ func CreateEvent(user_id int64, event structs.Event) (int64, error) {
 		return 0, err
 	}
 
-	members, err := GetGroupMembers(event.GroupID)
+	members, err := GetGroupMembers(event.GroupID, user_id)
 	if err != nil {
 		return 0, err
 	}
 
 	for _, member := range members {
-		if member.ID != user_id {
-			if err = CreateNotification(user_id, 0, member.ID, "event_created"); err != nil {
-				return 0, err
-			}
+		if err = CreateNotification(user_id, 0, member.ID, "event_created"); err != nil {
+			return 0, err
 		}
 	}
 
 	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
 	return id, nil
 }
 

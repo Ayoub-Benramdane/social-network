@@ -166,7 +166,26 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+	var imagePath string
+	image, header, err := r.FormFile("avatarImage")
+	if err != nil && err.Error() != "http: no such file" {
+		response := map[string]string{"error": "Failed to retrieve image"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if image != nil {
+		imagePath, err = SaveImage(image, header, "./data/avatars/")
+		if err != nil {
+			response := map[string]string{"error": err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, imagePath, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)

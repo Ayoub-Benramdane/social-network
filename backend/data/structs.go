@@ -7,22 +7,28 @@ import (
 )
 
 type User struct {
-	ID             int64     `json:"id" sqlite:"id"`
-	Username       string    `json:"username" sqlite:"username"`
-	FirstName      string    `json:"first_name" sqlite:"first_name"`
-	LastName       string    `json:"last_name" sqlite:"last_name"`
-	Email          string    `json:"email" sqlite:"email"`
-	DateOfBirth    time.Time `json:"date_of_birth" sqlite:"date_of_birth"`
-	Password       []byte    `json:"password" sqlite:"password"`
-	CreatedAt      time.Time `json:"created_at" sqlite:"created_at"`
-	ProfileImage   string    `json:"profile_image" sqlite:"profile_image"`
-	Bio            string    `json:"bio" sqlite:"bio"`
-	TotalPosts     int64     `json:"total_posts" sqlite:"total_posts"`
-	TotalLikes     int64     `json:"total_likes" sqlite:"total_likes"`
-	TotalComments  int64     `json:"total_comments" sqlite:"total_comments"`
-	TotalFollowers int64     `json:"total_followers" sqlite:"total_followers"`
-	TotalFollowing int64     `json:"total_following" sqlite:"total_following"`
-	SessionToken   uuid.UUID `json:"session_token" sqlite:"session_token"`
+	ID                 int64     `json:"id" sqlite:"id"`
+	Username           string    `json:"username" sqlite:"username"`
+	FirstName          string    `json:"first_name" sqlite:"first_name"`
+	LastName           string    `json:"last_name" sqlite:"last_name"`
+	Email              string    `json:"email" sqlite:"email"`
+	DateOfBirth        time.Time `json:"date_of_birth" sqlite:"date_of_birth"`
+	Password           []byte    `json:"password" sqlite:"password"`
+	CreatedAt          time.Time `json:"created_at" sqlite:"created_at"`
+	Avatar             string    `json:"avatar" sqlite:"avatar"`
+	Bio                string    `json:"bio" sqlite:"bio"`
+	TotalPosts         int64     `json:"total_posts" sqlite:"total_posts"`
+	TotalLikes         int64     `json:"total_likes" sqlite:"total_likes"`
+	TotalComments      int64     `json:"total_comments" sqlite:"total_comments"`
+	TotalFollowers     int64     `json:"total_followers" sqlite:"total_followers"`
+	TotalFollowing     int64     `json:"total_following" sqlite:"total_following"`
+	TotalGroups        int64     `json:"total_groups" sqlite:"total_groups"`
+	TotalEvents        int64     `json:"total_events" sqlite:"total_events"`
+	TotalNotifications int64     `json:"total_notifications" sqlite:"total_notifications"`
+	TotalMessages      int64     `json:"total_messages" sqlite:"total_messages"`
+	TotalInvitations   int64     `json:"total_invitations" sqlite:"total_invitations"`
+	Online             bool      `json:"online" sqlite:"online"`
+	SessionToken       uuid.UUID `json:"session_token" sqlite:"session_token"`
 }
 
 type Post struct {
@@ -64,14 +70,14 @@ type Group struct {
 }
 
 type Message struct {
-	ID                int64     `json:"id" sqlite:"id"`
-	SenderID          int64     `json:"sender_id" sqlite:"sender_id"`
-	SenderUsername    string    `json:"sender_username" sqlite:"sender_username"`
+	ID               int64     `json:"id" sqlite:"id"`
+	SenderID         int64     `json:"sender_id" sqlite:"sender_id"`
+	SenderUsername   string    `json:"sender_username" sqlite:"sender_username"`
 	ReceiverID       string    `json:"receiver_id" sqlite:"receiver_id"`
 	ReceiverUsername int64     `json:"receiver_username" sqlite:"receiver_username"`
-	Content           string    `json:"content" sqlite:"content"`
-	CreatedAt         time.Time `json:"created_at" sqlite:"created_at"`
-	Read              bool      `json:"read" sqlite:"read"`
+	Content          string    `json:"content" sqlite:"content"`
+	CreatedAt        time.Time `json:"created_at" sqlite:"created_at"`
+	Read             bool      `json:"read" sqlite:"read"`
 }
 
 type Notification struct {
