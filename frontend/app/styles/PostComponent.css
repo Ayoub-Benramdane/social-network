@@ -1,0 +1,129 @@
+.post-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+}
+
+.author-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.author-info {
+  margin-left: 0.75rem;
+}
+
+.author-name {
+  font-weight: 500;
+}
+
+.post-time {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.post-content {
+  padding: 0 1rem 1rem;
+}
+
+.post-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.post-text {
+  color: #4B5563;
+  margin-bottom: 1rem;
+}
+
+.post-category {
+  display: inline-block;
+  background-color: #F3E8FF;
+  color: #7E22CE;
+  padding: 0.25rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+}
+
+.post-actions {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #F3F4F6;
+}
+
+.like-action {
+  display: flex;
+  align-items: center;
+  color: #2563EB;
+}
+
+.like-action span {
+  margin-left: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.comments-action {
+  display: flex;
+  align-items: center;
+  margin-left: 1.5rem;
+  color: #6B7280;
+}
+
+.comments-action span {
+  margin-left: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.comments-section {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #F3F4F6;
+}
+
+.comments-title {
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.comment {
+  margin-bottom: 1rem;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.comment-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.comment-author {
+  margin-left: 0.5rem;
+  font-weight: 500;
+}
+
+.comment-text {
+  font-size: 0.875rem;
+  color: #4B5563;
+}
+
+.view-more-btn {
+  color: #3B82F6;
+  font-size: 0.875rem;
+}

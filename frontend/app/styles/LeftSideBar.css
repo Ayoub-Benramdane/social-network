@@ -1,0 +1,83 @@
+.left-sidebar {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+  
+  .search-box {
+    margin-bottom: 1rem;
+  }
+  
+  .search-input-container {
+    position: relative;
+  }
+  
+  .search-input-container input {
+    width: 100%;
+    background-color: #F3F4F6;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: none;
+    font-size: 0.875rem;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  .online-users {
+    margin-bottom: 1.5rem;
+  }
+  
+  .online-users h3, .communities h3 {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1F2937;
+    margin-bottom: 0.75rem;
+  }
+  
+  .user-list, .community-list {
+    list-style: none;
+  }
+  
+  .user-item, .community-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  
+  .avatar-container {
+    position: relative;
+  }
+  
+  .avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 51px;
+    object-fit: cover;
+  }
+  
+  .online-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #10B981;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    border: 2px solid white;
+  }
+  
+  .user-name, .community-name {
+    margin-left: 0.5rem;
+    font-size: 2rem;
+  }
+  
+  .view-more-btn {
+    color: #3B82F6;
+    font-size: 0.875rem;
+    margin-top: 0.75rem;
+  }

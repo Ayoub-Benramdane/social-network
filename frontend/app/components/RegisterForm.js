@@ -10,16 +10,43 @@ export default function RegisterForm() {
     password: "",
     confirmedPassword: "",
     dateOfBirth: "",
-    // aboutMe: "",
+    aboutMe: "",
+    avatar: null,
   });
 
   const [passwordError, setPasswordError] = useState("");
+  const [imageInputKey, setImageInputKey] = useState(Date.now());
 
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    setRegisterFormInputs({
+      ...registerFormInputs,
+      avatar: file,
+    });
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(registerFormInputs);
-    console.log(typeof registerFormInputs.dateOfBirth);
+    // console.log(registerFormInputs);
+    const formData = new FormData();
 
+    const fieldsToInclude = [
+      "username",
+      "firstName",
+      "lastName",
+      "email",
+      "dateOfBirth",
+      "password",
+      "confirmedPassword",
+      "aboutMe",
+    ];
+
+    fieldsToInclude.forEach((field) => {
+      formData.append(field, registerFormInputs[field]);
+    });
+
+    if (registerFormInputs.avatar) {
+      formData.append("avatar", registerFormInputs.avatar);
+    }
     if (registerFormInputs.password !== registerFormInputs.confirmedPassword) {
       setPasswordError("Passwords do not match!");
     }
@@ -28,10 +55,7 @@ export default function RegisterForm() {
 
     const response = await fetch("http://localhost:8404/register", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(registerFormInputs),
+      body: formData,
     });
 
     // const data = await response.json();
@@ -142,8 +166,43 @@ export default function RegisterForm() {
             {passwordError && <p style={{ color: "red" }}>{passwordError}</p>}
           </div>
 
+          {/* Avatar */}
+
+          <div className="image-input">
+            <p>Upload Image</p>
+            {registerFormInputs.avatar && (
+              <div>
+                <img
+                  style={{
+                    width: "150px",
+                    borderRadius: "8px",
+                  }}
+                  src={URL.createObjectURL(registerFormInputs.avatar)}
+                  alt="Selected"
+                />
+                <button
+                  onClick={(e) => {
+                    setRegisterFormInputs({
+                      ...registerFormInputs,
+                      avatar: null,
+                    });
+                    setImageInputKey(Date.now());
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            <input
+              key={imageInputKey}
+              type="file"
+              name="avatar"
+              onChange={handleImageChange}
+            ></input>
+          </div>
+
           {/* About Me */}
-          {/* <div className="about-me">
+          <div className="about-me">
             <label>About Me:</label>
             <textarea
               required
@@ -154,7 +213,7 @@ export default function RegisterForm() {
                 });
               }}
             />
-          </div> */}
+          </div>
         </div>
 
         <div className="date-of-birth">
@@ -162,11 +221,9 @@ export default function RegisterForm() {
           <input
             type="date"
             onChange={(e) => {
-              const formattedDate = new Date(e.target.value).toISOString();
-
               setRegisterFormInputs({
                 ...registerFormInputs,
-                dateOfBirth: formattedDate,
+                dateOfBirth: e.target.value,
               });
             }}
           ></input>

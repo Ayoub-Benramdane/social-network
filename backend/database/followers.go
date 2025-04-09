@@ -3,7 +3,7 @@ package database
 import structs "social-network/data"
 
 func AddFollower(follower_id, following_id int64) error {
-	_, err := DB.Exec("INSERT INTO followers (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)
+	_, err := DB.Exec("INSERT INTO follows (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)
 	if err == nil {
 		if err = CreateNotification(follower_id, 0, following_id, "follow"); err != nil {
 			return err
@@ -16,12 +16,12 @@ func AddFollower(follower_id, following_id int64) error {
 }
 
 func RemoveFollower(follower_id, following_id int64) error {
-	_, err := DB.Exec("DELETE FROM followers WHERE follower_id = ? AND following_id = ?", follower_id, following_id)
+	_, err := DB.Exec("DELETE FROM follows WHERE follower_id = ? AND following_id = ?", follower_id, following_id)
 	return err
 }
 
 func GetFollowers(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN followers f ON u.id = f.follower_id WHERE f.following_id = ?", user_id)
+	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GetFollowers(user_id int64) ([]structs.User, error) {
 }
 
 func GetFollowing(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN followers f ON u.id = f.following_id WHERE f.follower_id = ?", user_id)
+	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func GetFollowing(user_id int64) ([]structs.User, error) {
 }
 
 func GetNotFollowing(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT follower_id FROM followers WHERE following_id = ?) AND id != ?", user_id, user_id)
+	rows, err := DB.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT follower_id FROM follows WHERE following_id = ?) AND id != ?", user_id, user_id)
 	if err != nil {
 		return nil, err
 	}

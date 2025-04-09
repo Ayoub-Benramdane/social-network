@@ -1,0 +1,128 @@
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: white;
+    padding: 1rem 1rem;
+    border-radius: 0 0 28px 28px;
+  }
+  
+  .navbar-left {
+    display: flex;
+    align-items: center;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    margin-right: 2rem;
+  }
+  
+  .logo span {
+    margin-left: 0.5rem;
+    font-weight: 700;
+    color: #2563EB;
+  }
+  
+  .nav-links {
+    display: flex;
+    align-items: center;
+  }
+  
+  .home-link {
+    display: flex;
+    align-items: center;
+    background-color: #EFF6FF;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    color: #2563EB;
+  }
+  
+  .home-link span {
+    margin-left: 0.5rem;
+  }
+  
+  .icon-link {
+    margin-left: 1rem;
+  }
+  
+  .search-bar {
+    flex-grow: 1;
+    margin: 0 2rem;
+  }
+  
+  .search-input-container {
+    position: relative;
+  }
+  
+  .search-input-container input {
+    width: 60%;
+    background-color: #F3F4F6;
+    border-radius: 50px;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: none;
+    font-size: 0.875rem;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  .user-actions {
+    display: flex;
+    align-items: center;
+  }
+  
+  .notification-badge, .message-badge {
+    position: relative;
+    margin-right: 1rem;
+  }
+  
+  .badge {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    background-color: #EF4444;
+    color: white;
+    border-radius: 9999px;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+  }
+  
+  .user-profile {
+    display: flex;
+    align-items: center;
+  }
+  
+  .user-profile img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+  
+  .user-profile span {
+    margin-left: 0.5rem;
+    margin-right: 0.25rem;
+    font-weight: 500;
+  }
+
+  .logoutBtn {
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 20px;
+    background-color: crimson;
+  }
+
+  .logout-icon {
+    width: 16px;
+    height: 16px;
+  }

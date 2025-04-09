@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
@@ -25,6 +26,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	following, err := database.GetFollowing(user.ID)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve followings"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -41,6 +43,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := database.GetPosts(user.ID, following)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve posts"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -49,6 +52,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	best_categories, err := database.GetBestCategories()
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve best categories"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -89,6 +93,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	Events, err := database.GetEvents(user.ID)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve events"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)

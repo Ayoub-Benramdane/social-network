@@ -51,6 +51,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := database.GetUserByEmail(login.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			fmt.Println("1")
+
+			fmt.Println(err)
 			response := map[string]string{"error": "Invalid email or password"}
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(response)
@@ -64,6 +67,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
+		fmt.Println("2")
+
+		fmt.Println(err)
 		response := map[string]string{"error": "Password is incorrect"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -98,10 +104,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	data := map[string]interface{}{
-		"username":  user.Username,
+		"username":     user.Username,
 		"sessionToken": sessionToken.String(),
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }
@@ -122,11 +128,28 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		DateOfBirth       time.Time `json:"dateOfBirth"`
 		Password          string    `json:"password"`
 		ConfirmedPassword string    `json:"confirmedPassword"`
+		AboutMe           string    `json:"aboutMe"`
+	}
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Cannot parse form", http.StatusBadRequest)
+		return
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&register)
+	register.Username = r.FormValue("username")
+	register.FirstName = r.FormValue("firstName")
+	register.LastName = r.FormValue("lastName")
+	register.Email = r.FormValue("email")
+	register.Password = r.FormValue("password")
+	register.ConfirmedPassword = r.FormValue("confirmedPassword")
+	register.AboutMe = r.FormValue("aboutMe")
+
+	temp := r.FormValue("dateOfBirth")
+	register.DateOfBirth, err = time.Parse("2006-01-02", temp)
 	if err != nil {
-		response := map[string]string{"error": "Invalid request body"}
+		fmt.Println("here")
+		fmt.Println(err)
+		response := map[string]string{"error": "Error Parsing Date"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -151,6 +174,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
 	if err != nil {
+		fmt.Println("1")
+		fmt.Println(err)
 		response := map[string]string{"error": "Error hashing password"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -159,6 +184,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	sessionToken, err := uuid.NewV4()
 	if err != nil {
+		fmt.Println("2")
+		fmt.Println(err)
 		log.Printf("Error generating session token: %v", err)
 		response := map[string]string{"error": "Failed to generate session token"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -167,8 +194,10 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var imagePath string
-	image, header, err := r.FormFile("avatarImage")
+	image, header, err := r.FormFile("avatar")
 	if err != nil && err.Error() != "http: no such file" {
+		fmt.Println("3")
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -178,6 +207,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if image != nil {
 		imagePath, err = SaveImage(image, header, "./data/avatars/")
 		if err != nil {
+			fmt.Println("4")
+			fmt.Println(err)
 			response := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
@@ -185,7 +216,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, imagePath, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)
@@ -209,6 +240,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// fmt.Println("dasdsa")
 	if r.Method != http.MethodPost {
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)

@@ -42,7 +42,7 @@ func GetCategories() ([]structs.Category, error) {
 }
 
 func GetBestCategories() ([]structs.Category, error) {
-	rows, err := DB.Query("SELECT c.name FROM categories c JOIN (SELECT category_id, COUNT(*) as count FROM posts GROUP BY category_id ORDER BY count DESC LIMIT 5) p ON c.id = p.category_id")
+	rows, err := DB.Query("SELECT c.name FROM categories c JOIN (SELECT ca.id category_id, COUNT(pc.category_id) as count FROM post_categories pc JOIN categories ca ON ca.id = pc.category_id GROUP BY ca.id ORDER BY count DESC LIMIT 5) p ON c.id = p.category_id")
 	if err != nil {
 		return nil, err
 	}

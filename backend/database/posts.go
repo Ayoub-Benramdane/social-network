@@ -5,7 +5,7 @@ import (
 )
 
 func CreatePost(user_id int64, title, content, category, image, privacy string) (int64, error) {
-	result, err := DB.Exec("INSERT INTO posts (title, content, category, user_id, image, privacy) VALUES (?, ?, ?, ?, ?, ?, ?)", title, content, category, user_id, image, privacy)
+	result, err := DB.Exec("INSERT INTO posts (title, content, category, user_id, image, privacy) VALUES (?, ?, ?, ?, ?, ?)", title, content, category, user_id, image, privacy)
 	if err != nil {
 		return 0, err
 	}
@@ -16,7 +16,8 @@ func CreatePost(user_id int64, title, content, category, image, privacy string) 
 func GetPosts(id int64, followers []structs.User) ([]structs.Post, error) {
 	var posts []structs.Post
 	for _, follower := range followers {
-		rows, err := DB.Query("SELECT DISTINCT posts.id, posts.title, posts.content, post.category, post.image, users.username, posts.created_at, post.total_likes, post.total_comments FROM posts JOIN users ON posts.user_id = users.id WHERE posts.user_id = ? OR post.privacy = ? OR (post.privacy = ? AND post.user_id = ?)", id, "public", "public", follower.ID)
+		rows, err := DB.Query("SELECT DISTINCT posts.id, posts.title, posts.content, posts.category, posts.image, users.username, posts.created_at, posts.total_likes, posts.total_comments FROM posts JOIN users ON posts.user_id = users.id WHERE posts.user_id = ? OR posts.privacy = ? OR (posts.privacy = ? AND posts.user_id = ?)", id, "public", "public", follower.ID)
+
 		if err != nil {
 			return nil, err
 		}

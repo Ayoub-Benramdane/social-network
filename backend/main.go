@@ -52,7 +52,7 @@ func main() {
 	http.HandleFunc("/notifications/mark_all_as_read", handlers.MarkAllNotificationsAsReadHandler)
 	// http.HandleFunc("/search", handlers.SearchHandler)
 	http.HandleFunc("/chats", handlers.ChatHandler)
-	http.HandleFunc("/chats", handlers.ChatGroupHandler)
+	// http.HandleFunc("/chats", handlers.ChatGroupHandler)
 	http.HandleFunc("/ws", handlers.WebSocketHandler)
 
 	log.Println("Server started on :8404")

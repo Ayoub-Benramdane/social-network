@@ -5,8 +5,8 @@
     font-family: 'Poppins', Helvetica, sans-serif;
 }
 body {
-    height: 100vh;
-    background-color: #1A1C26;
+    /* height: 100vh; */
+    background-color: #EEEEEE;
     display: flex;
     justify-content: center;
     align-items: center;

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"html"
 	"log"
 	"net/http"
@@ -61,18 +62,15 @@ func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
-	return
 }
 
 func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	var post structs.Post
-	err := json.NewDecoder(r.Body).Decode(&post)
-	if err != nil {
-		response := map[string]string{"error": "Invalid request body"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
+	post.Title = r.FormValue("title")
+	post.Content = r.FormValue("content")
+	post.Privacy = r.FormValue("privacy")
+	post.Category = r.FormValue("category")
+	fmt.Println(post)
 
 	errors, valid := ValidatePost(post.Title, post.Content, post.Category, post.Privacy)
 	if !valid {
@@ -87,6 +85,7 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	var imagePath string
 	image, header, err := r.FormFile("postImage")
 	if err != nil && err.Error() != "http: no such file" {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -105,6 +104,8 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 
 	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Category, imagePath, post.Privacy)
 	if err != nil {
+		fmt.Println(err)
+
 		response := map[string]string{"error": "Failed to create post"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -146,14 +147,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var post_id int64
 	err = json.NewDecoder(r.Body).Decode(&post_id)
+
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	post, err := database.GetPost(post_id)
+	post, err := database.GetPost(5)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve post"}
 		w.WriteHeader(http.StatusInternalServerError)

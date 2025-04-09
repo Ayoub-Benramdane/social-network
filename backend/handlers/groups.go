@@ -16,13 +16,15 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var group structs.Group
-	err := json.NewDecoder(r.Body).Decode(&group)
-	if err != nil {
-		response := map[string]string{"error": "Invalid request body"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
+	group.Name = r.FormValue("name")
+	group.Description = r.FormValue("description")
+	// err := json.NewDecoder(r.Body).Decode(&group)
+	// if err != nil {
+	// 	response := map[string]string{"error": "Invalid request body"}
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	json.NewEncoder(w).Encode(response)
+	// 	return
+	// }
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
@@ -33,6 +35,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if group.Name == "" || len(group.Name) > 20 {
+		
 		response := map[string]string{"error": "Group name is required and must be less than 20 characters"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -45,7 +48,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var imagePath string
-	image, header, err := r.FormFile("postImage")
+	image, header, err := r.FormFile("groupImage")
 	if err != nil && err.Error() != "http: no such file" {
 		response := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
