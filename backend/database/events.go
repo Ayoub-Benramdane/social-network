@@ -1,14 +1,17 @@
 package database
 
-import structs "social-network/data"
+import (
+	structs "social-network/data"
+	"time"
+)
 
-func CreateEvent(user_id int64, event structs.Event) (int64, error) {
-	result, err := DB.Exec("INSERT INTO group_events (created_by, user_id, group_id, name, description, start_date, end_date, location) VALUES (?, ?, ?, ?, ?, ?, ?)", user_id, user_id, event.GroupID, event.Name, event.Description, event.StartDate, event.EndDate, event.Location)
+func CreateEvent(user_id int64, name, description, location string, start, end time.Time, group_id int64, image string) (int64, error) {
+	result, err := DB.Exec("INSERT INTO group_events (created_by, group_id, name, description, start_date, end_date, location, image, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", user_id, group_id, name, description, start, end, location, image, time.Now())
 	if err != nil {
 		return 0, err
 	}
 
-	members, err := GetGroupMembers(event.GroupID, user_id)
+	members, err := GetGroupMembers(group_id, user_id)
 	if err != nil {
 		return 0, err
 	}
@@ -24,7 +27,7 @@ func CreateEvent(user_id int64, event structs.Event) (int64, error) {
 }
 
 func GetEvents(user_id int64) ([]structs.Event, error) {
-	rows, err := DB.Query("SELECT e.id, u.username, g.name, e.name, e.description, e.start_date, e.end_date, e.location FROM group_events e JOIN users u ON e.created_by = u.id JOIN groups g ON e.group_id = g.id WHERE e.user_id = ? ORDER BY e.start_date DESC LIMIT 5", user_id)
+	rows, err := DB.Query("SELECT e.id, u.username, g.name, e.name, e.description, e.start_date, e.end_date, e.location FROM group_events e JOIN users u ON e.created_by = u.id JOIN groups g ON e.group_id = g.id JOIN event_members em ON e.id = em.event_id WHERE em.user_id = ? ORDER BY e.start_date DESC LIMIT 5", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +35,7 @@ func GetEvents(user_id int64) ([]structs.Event, error) {
 	var events []structs.Event
 	for rows.Next() {
 		var event structs.Event
-		err = rows.Scan(&event.ID, &event.Creator, &event.Name, &event.StartDate, &event.EndDate, &event.Location)
+		err = rows.Scan(&event.ID, &event.Creator, &event.GroupName, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location)
 		if err != nil {
 			return nil, err
 		}
@@ -44,10 +47,7 @@ func GetEvents(user_id int64) ([]structs.Event, error) {
 func GetEvent(id int64) (structs.Event, error) {
 	var event structs.Event
 	err := DB.QueryRow("SELECT u.username, g.name, e.name, e.description, e.start_date, e.end_date, e.location FROM group_events e JOIN users u ON u.id = e.created_by JOIN groups g ON g.id = e.group_id WHERE e.id = ?", id).Scan(&event.Creator, &event.Group, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location)
-	if err != nil {
-		return structs.Event{}, err
-	}
-	return event, nil
+	return event, err
 }
 
 func GetEventGroup(group_id int64) ([]structs.Event, error) {
@@ -66,4 +66,10 @@ func GetEventGroup(group_id int64) ([]structs.Event, error) {
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+func GetCountUserEvents(id int64) (int64, error) {
+	var count int64
+	err := DB.QueryRow("SELECT COUNT(*) FROM group_events WHERE created_by = ?", id).Scan(&count)
+	return count, err
 }

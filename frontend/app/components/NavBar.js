@@ -26,7 +26,6 @@ export default function Navbar({ user }) {
       <div className="navbar-left">
         <div className="logo">
           <img src="./icons/logo.svg" alt="Logo" width={24} height={24} />
-          <span>SocialNetwork</span>
         </div>
 
         <div className="nav-links">
@@ -70,6 +69,7 @@ export default function Navbar({ user }) {
         <div className="notification-badge">
           <div className="badge">1</div>
           <img
+            className="notification-icon"
             src="./icons/notification.svg"
             alt="Notifications"
             width={20}
@@ -86,18 +86,21 @@ export default function Navbar({ user }) {
           />
         </div>
         <div className="user-profile">
-          <img
-            src={user?.avatar || "avatar.jpg"}
-            alt={user?.username || "User"}
-            className="user-avatar"
-          />
-          <span>{user?.username || "Amine Dinani"}</span>
-          <button onClick={handleLogout} className="logoutBtn">
+          {/* <div className="user-name-avatar"> */}
             <img
+              src={user.avatar}
+              alt={user.username || "User"}
+              className="user-avatar"
+            />
+            <span>{`${user.first_name} ${user.last_name}`}</span>
+          {/* </div> */}
+
+          <button onClick={handleLogout} className="logoutBtn">
+            {/* <img
               src={"./icons/logout.svg"}
               alt="logout"
               className="logout-icon"
-            />
+            /> */}
             <span>Logout</span>
           </button>
         </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Navbar from "./components/NavBar";
 import LeftSidebar from "./components/LeftSideBar";
 import ProfileCard from "./components/ProfileCard";
-import SuggestedCommunities from "./components/SuggestedCommunities";
+import TopGroups from "./components/TopGroups";
 import PostComponent from "./components/PostComponent";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
@@ -13,8 +13,8 @@ import "./styles/page.css";
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-  const [posts, setPosts] = useState([]);
+  const [homeData, setHomeData] = useState(null);
+
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -54,14 +54,18 @@ export default function Home() {
       })
         .then((response) => response.json())
         .then((data) => {
-          console.log("Posts data:", data);
-          setPosts(Array.isArray(data) ? data : [data]);
+          setHomeData(data);
+          console.log( "Data received : ",data);
+          
         })
         .catch((error) => {
           console.error("Error fetching posts:", error);
         });
     }
   }, [isLoggedIn]);
+  
+  
+  // console.log("All:", posts);
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
@@ -132,32 +136,34 @@ export default function Home() {
     );
   }
 
-  return (
-    <div className="app-container">
-      <Navbar user={user} />
 
-      <div className="main-content">
-        <div className="grid-layout">
-          {/* Left Sidebar */}
-          <div className="left-column">
-            <LeftSidebar />
-          </div>
-
-          {/* Main Content */}
-          <div className="center-column">
-            {/* Posts */}
-            {/* {samplePosts.map((post) => ( */}
-            <PostComponent />
-            {/* ))} */}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="right-column">
-            <ProfileCard user={user} />
-            <SuggestedCommunities />
+    if (isLoggedIn && homeData) {
+      return (
+        <div className="app-container">
+          <Navbar user={homeData.user} />
+    
+          <div className="main-content">
+            <div className="grid-layout">
+              {/* Left Sidebar */}
+              <div className="left-column">
+                <LeftSidebar users={homeData.not_following} bestcategories={homeData.best_categories}/>
+              </div>
+    
+              {/* Main Content */}
+              <div className="center-column">
+                <PostComponent posts={homeData.posts} />
+              </div>
+    
+              {/* Right Sidebar */}
+              <div className="right-column">
+                <ProfileCard user={homeData.user} />
+                <TopGroups groups={homeData.other_groups} />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      );
+    }
+
+
 }

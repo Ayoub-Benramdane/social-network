@@ -1,25 +1,26 @@
-.suggested-communities {
+.suggested-groups {
     background-color: white;
-    border-radius: 0.5rem;
+    border-radius: 1.5rem;
     padding: 1rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
   
-  .suggested-communities h3 {
+  .suggested-groups h3 {
     font-size: 0.875rem;
     font-weight: 500;
     color: #1F2937;
     margin-bottom: 0.75rem;
   }
   
-  .community-list {
+  .group-list {
     list-style: none;
   }
   
-  .community-item {
+  .group-item {
+    padding: 12px;
+
     display: flex;
     align-items: center;
-    margin-bottom: 0.75rem;
   }
   
   .avatar {
@@ -29,7 +30,7 @@
     object-fit: cover;
   }
   
-  .community-name {
+  .group-name {
     margin-left: 0.5rem;
     font-size: 0.875rem;
   }

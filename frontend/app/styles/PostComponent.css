@@ -1,20 +1,44 @@
 .post-card {
   background-color: white;
-  border-radius: 0.5rem;
+  border-radius: 1.5rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   margin-bottom: 1.5rem;
   overflow: hidden;
+  padding: 20px 8px 20px 8px;
 }
 
 .post-header {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 1rem;
+}
+.privacy-text {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: #B8C3E1;
+}
+
+.post-privacy {
+  height: 50%;
+  gap: 16px;
+  border-radius: 50px;
+  display: flex;
+  flex-direction: row;
+  background-color: #f1f3f8;
+  padding: 4px;
+  margin: 1rem;
+}
+
+.privacy-icon{
+  padding: 0 4px ;
 }
 
 .author-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 9999px;
   object-fit: cover;
 }
@@ -24,6 +48,7 @@
 }
 
 .author-name {
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -37,12 +62,13 @@
 }
 
 .post-title {
-  font-size: 1.125rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1.3rem;
 }
 
 .post-text {
+  font-size: 1rem;
   color: #4B5563;
   margin-bottom: 1rem;
 }
@@ -57,16 +83,20 @@
 }
 
 .post-actions {
+  gap: 32px;
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
   border-top: 1px solid #F3F4F6;
 }
 
-.like-action {
+.action-like, .action-comment {
+  gap: 8px;
   display: flex;
   align-items: center;
-  color: #2563EB;
+  justify-content: center;
+  color: #B8C3E1;
+  cursor: pointer;
 }
 
 .like-action span {

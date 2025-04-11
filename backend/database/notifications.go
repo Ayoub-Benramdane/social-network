@@ -39,24 +39,15 @@ func GetNotifications(notified_id int64) ([]structs.Notification, error) {
 
 func DeleteNotification(user_id, post_id, post_user_id int64, type_notification string) error {
 	_, err := DB.Exec("DELETE FROM notifications WHERE user_id = ? AND post_id = ? AND notified_id = ? AND type_notification = ?", user_id, post_id, post_user_id, type_notification)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func MarkNotificationAsRead(user_id, notfication_id int64) error {
 	_, err := DB.Exec("UPDATE notifications SET read = 1 WHERE user_id = ? AND id = ?", user_id, notfication_id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func MarkAllNotificationsAsRead(user_id int64) error {
 	_, err := DB.Exec("UPDATE notifications SET read = 1 WHERE user_id = ?", user_id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

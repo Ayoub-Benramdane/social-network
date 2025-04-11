@@ -39,7 +39,7 @@ func GetFollowers(user_id int64) ([]structs.User, error) {
 }
 
 func GetFollowing(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = ?", user_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func GetFollowing(user_id int64) ([]structs.User, error) {
 	var following []structs.User
 	for rows.Next() {
 		var follower structs.User
-		err = rows.Scan(&follower.ID, &follower.Username)
+		err = rows.Scan(&follower.ID, &follower.Username, &follower.Avatar)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func GetFollowing(user_id int64) ([]structs.User, error) {
 }
 
 func GetNotFollowing(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT follower_id FROM follows WHERE following_id = ?) AND id != ?", user_id, user_id)
+	rows, err := DB.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT following_id FROM follows WHERE follower_id = ?) AND id != ?", user_id, user_id)
 	if err != nil {
 		return nil, err
 	}

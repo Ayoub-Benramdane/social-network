@@ -38,7 +38,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors, valid := ValidateInput("", "", "", login.Email, login.Password, time.Now())
+	errors, valid := ValidateInput("", "", "", login.Email, login.Password, "", "", "", time.Now())
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -129,7 +129,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Password          string    `json:"password"`
 		ConfirmedPassword string    `json:"confirmedPassword"`
 		AboutMe           string    `json:"aboutMe"`
+		Privacy           string    `json:"privacy"`
 	}
+
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		http.Error(w, "Cannot parse form", http.StatusBadRequest)
@@ -143,6 +145,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	register.Password = r.FormValue("password")
 	register.ConfirmedPassword = r.FormValue("confirmedPassword")
 	register.AboutMe = r.FormValue("aboutMe")
+	register.Privacy = r.FormValue("privacy")
 
 	temp := r.FormValue("dateOfBirth")
 	register.DateOfBirth, err = time.Parse("2006-01-02", temp)
@@ -155,14 +158,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if register.Password != register.ConfirmedPassword {
-		response := map[string]string{"error": "Passwords do not match"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
+	register.Privacy = "public"
 
-	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.DateOfBirth)
+	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmedPassword, register.Privacy, register.AboutMe, register.DateOfBirth)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -205,7 +203,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if image != nil {
-		imagePath, err = SaveImage(image, header, "./data/avatars/")
+		imagePath, err = SaveImage(image, header, "../frontend/public/avatars/")
 		if err != nil {
 			fmt.Println("4")
 			fmt.Println(err)
@@ -214,9 +212,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(response)
 			return
 		}
+		newpath := strings.Split(imagePath, "/public")
+		imagePath = newpath[1]
+	} else {
+		imagePath = "/inconnu/avatar.png"
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)
@@ -240,7 +242,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("dasdsa")
 	if r.Method != http.MethodPost {
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -276,12 +277,13 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func ValidateInput(username, firstName, lastName, email, password string, date time.Time) (map[string]string, bool) {
+func ValidateInput(username, firstName, lastName, email, password, confirm_pass, privacy, aboutMe string, date time.Time) (map[string]string, bool) {
 	errors := make(map[string]string)
 	const maxUsername = 10
 	const maxEmail = 30
 	const maxPassword = 20
 	const maxNameLength = 20
+	const maxAboutMe = 100
 
 	// ✅ Validation de l'email
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
@@ -294,7 +296,9 @@ func ValidateInput(username, firstName, lastName, email, password string, date t
 	}
 
 	// ✅ Validation du mot de passe
-	if len(password) < 8 {
+	if password != confirm_pass && username != "" {
+		errors["password"] = "Passwords do not match"
+	} else if len(password) < 8 {
 		errors["password"] = "Password must be at least 8 characters long"
 	} else if len(password) > maxPassword {
 		errors["password"] = fmt.Sprintf("Password cannot be longer than %d characters.", maxPassword)
@@ -353,6 +357,17 @@ func ValidateInput(username, firstName, lastName, email, password string, date t
 			} else if date.Before(year1900) {
 				errors["date"] = "Date cannot be before the year 1900"
 			}
+		}
+		// ✅ Validation de la description
+		if len(aboutMe) == 0 {
+			errors["about_me"] = "About Me cannot be empty"
+		} else if len(aboutMe) > maxAboutMe {
+			errors["about_me"] = fmt.Sprintf("About me cannot be longer than %d characters.", maxAboutMe)
+		}
+
+		// ✅ Validation de la privacy
+		if privacy != "public" && privacy != "private" {
+			errors["privacy"] = "Privacy must be either 'public' or 'private'"
 		}
 	}
 

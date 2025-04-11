@@ -1,9 +1,11 @@
 .left-sidebar {
-    background-color: white;
-    border-radius: 0.5rem;
+  background-color: white;
+  border-radius: 1.5rem;
     padding: 1rem;
+    /* box-shadow: rgba(38, 38, 247, 0.15) 0px 2px 29px 0px; */
+
   }
-  
+
   .search-box {
     margin-bottom: 1rem;
   }
@@ -14,7 +16,7 @@
   
   .search-input-container input {
     width: 100%;
-    background-color: #F3F4F6;
+    background-color: #F1F4FD;
     border-radius: 9999px;
     padding: 0.5rem 1rem 0.5rem 2.5rem;
     border: none;
@@ -28,56 +30,98 @@
     transform: translateY(-50%);
   }
   
-  .online-users {
+  .users {
+    /* height: 250px;
+    /* overflow-y: auto;
     margin-bottom: 1.5rem;
+  
+    scrollbar-width: thin; 
+    scrollbar-color: #3555F9 #e6e0f8;  */
+   
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   
-  .online-users h3, .communities h3 {
+  
+  .users h3, .categories h3 {
     font-size: 0.875rem;
     font-weight: 500;
     color: #1F2937;
     margin-bottom: 0.75rem;
   }
   
-  .user-list, .community-list {
+  .user-list, .category-list {
+    height: 300px;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  
+    scrollbar-width: thin; 
+    scrollbar-color: #3555F9 #e6e0f8; 
+  
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin: 8px;
     list-style: none;
   }
   
-  .user-item, .community-item {
+  .user-item, .category-item {
+    /* box-shadow: rgba(6, 6, 146, 0.2) 0px 7px 12px 0px; */
     display: flex;
     align-items: center;
-    margin-bottom: 0.75rem;
+    padding: 12px;
+    /* margin-bottom: 1rem; */
+    border-radius: 1rem;
   }
   
-  .avatar-container {
-    position: relative;
-  }
+  /* .avatar-container {
+    /* position: relative; */
+  /* } */ 
   
   .avatar {
-    width: 2rem;
-    height: 2rem;
+    background-color: #2440ca;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 51px;
     object-fit: cover;
+    margin: 0 12px 0 0;
   }
   
-  .online-indicator {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    background-color: #10B981;
-    width: 0.625rem;
-    height: 0.625rem;
-    border-radius: 9999px;
-    border: 2px solid white;
-  }
-  
-  .user-name, .community-name {
+  .user-name, .category-name {
     margin-left: 0.5rem;
-    font-size: 2rem;
+    font-size: 1rem;
   }
   
   .view-more-btn {
     color: #3B82F6;
     font-size: 0.875rem;
     margin-top: 0.75rem;
+  }
+
+  .follow-btn {
+    box-shadow: rgba(6, 6, 236, 0.3) 0px 2px 29px 0px;
+
+    background-color: #3555F9;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 8px 16px 8px 16px;
+    cursor: pointer;
+  }
+  .follow-btn:hover {
+    background-color: #2440ca;
+
+  }
+
+  .name-follow {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 2px 0 4px 0;
   }

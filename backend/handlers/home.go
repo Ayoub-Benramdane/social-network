@@ -24,6 +24,15 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user_info, err := database.GetProfileInfo(user.ID)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	following, err := database.GetFollowing(user.ID)
 	if err != nil {
 		fmt.Println(err)
@@ -61,6 +70,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 	my_groups, err := database.GetGroups(user.ID)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -101,28 +111,28 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var home = struct {
-		User               *structs.User        `json:"user"`
+		User               structs.User         `json:"user"`
 		Posts              []structs.Post       `json:"posts"`
 		BestCategories     []structs.Category   `json:"best_categories"`
 		MyGroups           []structs.Group      `json:"groups"`
 		OtherGroups        []structs.Group      `json:"other_groups"`
-		Following          []structs.User       `json:"following"`
 		NotFollowing       []structs.User       `json:"not_following"`
 		InvitationsFriends []structs.Invitation `json:"invitations_friends"`
 		InvitationsGroups  []structs.Invitation `json:"invitations_groups"`
 		Events             []structs.Event      `json:"events"`
 	}{
-		User:               user,
+		User:               user_info,
 		Posts:              posts,
 		BestCategories:     best_categories,
 		MyGroups:           my_groups,
 		OtherGroups:        other_groups,
-		Following:          following,
 		NotFollowing:       not_following,
 		InvitationsFriends: invitations_friends,
 		InvitationsGroups:  invitations_groups,
 		Events:             Events,
 	}
+
+	fmt.Println(home.User)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(home)

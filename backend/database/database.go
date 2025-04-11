@@ -33,7 +33,7 @@ func InitDB() error {
 	}
 
 	// Create Categories table
-	return CreateCategoryies()
+	return nil
 }
 
 // applyMigrations applies all migrations to the database

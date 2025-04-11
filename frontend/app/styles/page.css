@@ -1,9 +1,11 @@
 .app-container {
+  width: 100%;
     min-height: 100vh;
-    background-color: #F3F4F6;
+    background-color: #F1F4FD;
   }
   
   .main-content {
+    width: 100%;
     max-width: 100%;
     margin: 0 auto;
     padding: 1.5rem 1rem;

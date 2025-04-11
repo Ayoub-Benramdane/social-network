@@ -1,10 +1,10 @@
 -- +migrate Up
 CREATE TABLE
-    IF NOT EXISTS members (
+    IF NOT EXISTS event_members (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        group_id INTEGER NOT NULL,
+        event_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+        FOREIGN KEY (event_id) REFERENCES group_events (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-        UNIQUE (group_id, user_id)
+        UNIQUE (event_id, user_id)
     );

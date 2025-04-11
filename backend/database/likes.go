@@ -39,6 +39,6 @@ func CheckLike(user_id, post_id int64) bool {
 
 func GetCountUserLikes(user_id int64) (int64, error) {
 	var count int64
-	err := DB.QueryRow("SELECT COUNT(*) FROM likes WHERE user_id = ?", user_id).Scan(&count)
+	err := DB.QueryRow("SELECT COUNT(*) FROM post_likes WHERE user_id = ?", user_id).Scan(&count)
 	return count, err
 }

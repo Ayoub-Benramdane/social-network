@@ -7,8 +7,8 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-func RegisterUser(Username, FirstName, LastName, Email, AboutMe, Image string, HashedPassword []byte, DateOfBirth time.Time, SessionToken uuid.UUID) error {
-	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, avatar, date_of_birth, password, session_token, about) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, Image, DateOfBirth, HashedPassword, SessionToken, AboutMe)
+func RegisterUser(Username, FirstName, LastName, Email, AboutMe, Image, Privacy string, HashedPassword []byte, DateOfBirth time.Time, SessionToken uuid.UUID) error {
+	_, err := DB.Exec("INSERT INTO users (username, firstname, lastname, email, avatar, privacy, date_of_birth, password, session_token, about) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", Username, FirstName, LastName, Email, Image, Privacy, DateOfBirth, HashedPassword, SessionToken, AboutMe)
 	return err
 }
 

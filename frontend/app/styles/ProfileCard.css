@@ -1,14 +1,16 @@
 .profile-card {
     background-color: white;
-    border-radius: 0.5rem;
+    border-radius: 1.5rem;
     overflow: hidden;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     margin-bottom: 1.5rem;
+    padding: 20px;
   }
   
   .profile-image img {
+    border-radius: 1.5rem;
     width: 100%;
-    height: 9rem;
+    height: 20rem;
     object-fit: cover;
   }
   
@@ -19,7 +21,7 @@
   
   .profile-name {
     font-size: 1.25rem;
-    font-weight: 700;
+    font-weight: 500;
     margin-bottom: 1rem;
   }
   
@@ -43,14 +45,17 @@
     color: #6B7280;
   }
   
-  .create-post-btn {
-    background-color: #EFF6FF;
-    color: #2563EB;
-    border-radius: 9999px;
-    padding: 0.5rem 1rem;
-    display: flex;
-    align-items: center;
-    margin: 0 auto;
+  .create-post-btn, .create-group-btn {
+    box-shadow: rgba(6, 6, 236, 0.3) 0px 2px 29px 0px;
+    font-size: 14px;
+    font-weight: 700;
+    background-color: #3555F9;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 16px 10px 16px;
+    cursor: pointer;
+    margin: 8px;
   }
   
   .create-post-btn span {

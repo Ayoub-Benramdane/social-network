@@ -10,6 +10,7 @@ CREATE TABLE
         password TEXT NOT NULL,
         avatar TEXT NOT NULL,
         about TEXT,
+        privacy TEXT NOT NULL,
         session_token TEXT,
         followers INTEGER DEFAULT 0,
         following INTEGER DEFAULT 0,

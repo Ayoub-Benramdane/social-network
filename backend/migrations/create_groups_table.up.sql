@@ -2,9 +2,11 @@
 CREATE TABLE
     IF NOT EXISTS groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin INTEGER NOT NULL,
         name TEXT UNIQUE NOT NULL,
         description TEXT NOT NULL,
         image TEXT NOT NULL,
-        admin INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        privacy TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (admin) REFERENCES users (id) ON DELETE CASCADE
     );

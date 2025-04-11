@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
 * {
     margin: 0;
@@ -13,10 +13,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    /* height: 100vh; */
+    height: 100vh;
 }
 
-/* .profile-form {
+.profile-form {
     background-color: #272930;
     padding: 40px;
     width: 100%;
@@ -24,7 +24,7 @@ body {
     border-radius: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     color: #A5A5A5;
-} */
+}
 
 h3 {
     font-size: 28px;
@@ -65,7 +65,7 @@ h3 {
     outline: none;
 }
 
-/* button {
+button {
     padding: 12px 20px;
     background-color: #8A3FFC;
     color: white;
@@ -76,7 +76,7 @@ h3 {
     width: 100%;
     margin-top: 20px;
     transition: background-color 0.3s;
-} */
+}
 
 button:hover {
     background-color: #6A2BCC;
@@ -99,4 +99,4 @@ button:hover {
     button {
         font-size: 14px;
     }
-}
+} */

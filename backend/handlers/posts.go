@@ -9,6 +9,7 @@ import (
 	structs "social-network/data"
 	"social-network/database"
 	"strconv"
+	"strings"
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,10 +70,18 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	post.Title = r.FormValue("title")
 	post.Content = r.FormValue("content")
 	post.Privacy = r.FormValue("privacy")
-	post.Category = r.FormValue("category")
+	category_id, err := strconv.ParseInt(r.FormValue("category"), 10, 64)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Invalid category"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	post.CategoryID = category_id
 	fmt.Println(post)
 
-	errors, valid := ValidatePost(post.Title, post.Content, post.Category, post.Privacy)
+	errors, valid := ValidatePost(post.Title, post.Content, post.Privacy)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -93,19 +102,20 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	}
 
 	if image != nil {
-		imagePath, err = SaveImage(image, header, "./data/images/")
+		imagePath, err = SaveImage(image, header, "../frontend/public/images/")
 		if err != nil {
 			response := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
 			return
 		}
+		newpath := strings.Split(imagePath, "/public")
+		imagePath = newpath[1]
 	}
 
-	id, err := database.CreatePost(user.ID, post.Title, post.Content, post.Category, imagePath, post.Privacy)
+	id, err := database.CreatePost(user.ID, post.CategoryID, post.Title, post.Content, imagePath, post.Privacy)
 	if err != nil {
 		fmt.Println(err)
-
 		response := map[string]string{"error": "Failed to create post"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -175,11 +185,10 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(post)
 }
 
-func ValidatePost(title, content, category, privacy string) (map[string]string, bool) {
+func ValidatePost(title, content, privacy string) (map[string]string, bool) {
 	errors := make(map[string]string)
 	const maxTitle = 20
 	const maxContent = 300
-	const maxCategory = 20
 
 	if title == "" {
 		errors["title"] = "Title is required"
@@ -191,12 +200,6 @@ func ValidatePost(title, content, category, privacy string) (map[string]string, 
 		errors["content"] = "Content is required"
 	} else if len(content) > maxContent {
 		errors["content"] = "Content must be less than " + strconv.Itoa(maxContent) + " characters"
-	}
-
-	if category == "" {
-		errors["category"] = "Category is required"
-	} else if len(category) > maxCategory {
-		errors["category"] = "Category must be less than " + strconv.Itoa(maxCategory) + " characters"
 	}
 
 	if privacy == "" {

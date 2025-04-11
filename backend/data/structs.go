@@ -1,10 +1,15 @@
 package structs
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gofrs/uuid"
 )
+
+type Db struct {
+	db *sql.DB
+}
 
 type User struct {
 	ID                 int64     `json:"id" sqlite:"id"`
@@ -14,9 +19,11 @@ type User struct {
 	Email              string    `json:"email" sqlite:"email"`
 	DateOfBirth        time.Time `json:"date_of_birth" sqlite:"date_of_birth"`
 	Password           []byte    `json:"password" sqlite:"password"`
+	ConfirmPass        []byte    `json:"confirm_pass" sqlite:"confirm_pass"`
 	CreatedAt          time.Time `json:"created_at" sqlite:"created_at"`
 	Avatar             string    `json:"avatar" sqlite:"avatar"`
 	Bio                string    `json:"bio" sqlite:"bio"`
+	Privacy            string    `json:"privacy" sqlite:"privacy"`
 	TotalPosts         int64     `json:"total_posts" sqlite:"total_posts"`
 	TotalLikes         int64     `json:"total_likes" sqlite:"total_likes"`
 	TotalComments      int64     `json:"total_comments" sqlite:"total_comments"`
@@ -36,6 +43,7 @@ type Post struct {
 	Title         string    `json:"title" sqlite:"title"`
 	UserID        int64     `json:"user_id" sqlite:"user_id"`
 	Content       string    `json:"content" sqlite:"content"`
+	CategoryID    int64     `json:"category_id" sqlite:"category_id"`
 	Category      string    `json:"category" sqlite:"category"`
 	Image         string    `json:"image" sqlite:"image"`
 	Author        string    `json:"author" sqlite:"author"`
@@ -66,6 +74,7 @@ type Group struct {
 	Description string    `json:"description" sqlite:"description"`
 	CreatedAt   time.Time `json:"created_at" sqlite:"created_at"`
 	Admin       string    `json:"admin" sqlite:"admin"`
+	Privacy     string    `json:"privacy" sqlite:"privacy"`
 	Members     []User    `json:"members" sqlite:"members"`
 }
 
@@ -90,17 +99,21 @@ type Notification struct {
 }
 
 type Invitation struct {
-	ID      int64  `json:"id" sqlite:"id"`
-	Sender  string `json:"sender" sqlite:"sender"`
-	GroupID string `json:"group_id" sqlite:"group_id"`
+	ID       int64  `json:"id" sqlite:"id"`
+	SenderID int64  `json:"sender_id" sqlite:"sender_id"`
+	GroupID  int64  `json:"group_id" sqlite:"group_id"`
+	Sender   string `json:"sender" sqlite:"sender"`
+	Group    string `json:"group" sqlite:"group"`
 }
 
 type Event struct {
 	ID          int64     `json:"id" sqlite:"id"`
 	Group       string    `json:"group" sqlite:"group"`
 	GroupID     int64     `json:"group_id" sqlite:"group_id"`
+	GroupName   string    `json:"group_name" sqlite:"group_name"`
 	Name        string    `json:"name" sqlite:"name"`
 	Description string    `json:"description" sqlite:"description"`
+	Image       string    `json:"image" sqlite:"image"`
 	Location    string    `json:"location" sqlite:"location"`
 	StartDate   time.Time `json:"start_date" sqlite:"start_date"`
 	EndDate     time.Time `json:"end_date" sqlite:"end_date"`

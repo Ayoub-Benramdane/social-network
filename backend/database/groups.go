@@ -10,28 +10,22 @@ func CreateGroup(admin int64, name, description, image string) (int64, error) {
 		return 0, err
 	}
 	group_id, err := result.LastInsertId()
-	return group_id, nil
+	return group_id, err
 }
 
 func JoinGroup(user_id, group_id int64) error {
 	_, err := DB.Exec("INSERT INTO members (user_id, group_id) VALUES (?, ?)", user_id, group_id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func LeaveGroup(user_id, group_id int64) error {
 	_, err := DB.Exec("DELETE FROM members WHERE user_id = ? AND group_id = ?", user_id, group_id)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func GetGroups(user_id int64) ([]structs.Group, error) {
 	var groups []structs.Group
-	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.admin FROM groups g JOIN members m ON g.id = m.group_id WHERE m.user_id = ?", user_id)
+	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.admin FROM groups g JOIN group_members m ON g.id = m.group_id WHERE m.user_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +43,7 @@ func GetGroups(user_id int64) ([]structs.Group, error) {
 
 func GetOtherGroups(user_id int64) ([]structs.Group, error) {
 	var groups []structs.Group
-	rows, err := DB.Query("SELECT id, name, description, image, admin FROM groups WHERE id NOT IN (SELECT group_id FROM members WHERE user_id = ?)", user_id)
+	rows, err := DB.Query("SELECT id, name, description, image, admin FROM groups WHERE id NOT IN (SELECT group_id FROM group_members WHERE user_id = ?)", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -68,15 +62,12 @@ func GetOtherGroups(user_id int64) ([]structs.Group, error) {
 func GetGroup(group_id int64) (structs.Group, error) {
 	var group structs.Group
 	err := DB.QueryRow("SELECT id, name, description, image, admin FROM groups WHERE id = ?", group_id).Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Admin)
-	if err != nil {
-		return structs.Group{}, err
-	}
-	return group, nil
+	return group, err
 }
 
 func GetGroupMembers(group_id, user_id int64) ([]structs.User, error) {
 	var members []structs.User
-	rows, err := DB.Query("SELECT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN members m ON u.id = m.user_id WHERE m.group_id = ? AND u.id != ?", group_id, user_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN group_members m ON u.id = m.user_id WHERE m.group_id = ? AND u.id != ?", group_id, user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -108,4 +99,10 @@ func GetGroupPosts(group_id int64) ([]structs.Post, error) {
 		posts = append(posts, post)
 	}
 	return posts, nil
+}
+
+func GetCountUserGroups(id int64) (int64, error) {
+	var count int64
+	err := DB.QueryRow("SELECT COUNT(*) FROM groups WHERE admin = ?", id).Scan(&count)
+	return count, err
 }
