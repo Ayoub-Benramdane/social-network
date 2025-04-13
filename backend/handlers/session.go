@@ -33,8 +33,5 @@ func GetUserFromSession(r *http.Request) (*structs.User, error) {
 		return nil, err
 	}
 	user, err := database.GetUserConnected(cookie.Value)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
+	return &user, err
 }

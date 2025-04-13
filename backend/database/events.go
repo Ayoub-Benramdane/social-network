@@ -11,7 +11,7 @@ func CreateEvent(user_id int64, name, description, location string, start, end t
 		return 0, err
 	}
 
-	members, err := GetGroupMembers(group_id, user_id)
+	members, err := GetGroupMembers(group_id)
 	if err != nil {
 		return 0, err
 	}
@@ -70,6 +70,6 @@ func GetEventGroup(group_id int64) ([]structs.Event, error) {
 
 func GetCountUserEvents(id int64) (int64, error) {
 	var count int64
-	err := DB.QueryRow("SELECT COUNT(*) FROM group_events WHERE created_by = ?", id).Scan(&count)
+	err := DB.QueryRow("SELECT COUNT(*) FROM event_members WHERE user_id = ?", id).Scan(&count)
 	return count, err
 }

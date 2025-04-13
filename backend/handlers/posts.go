@@ -79,7 +79,6 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		return
 	}
 	post.CategoryID = category_id
-	fmt.Println(post)
 
 	errors, valid := ValidatePost(post.Title, post.Content, post.Privacy)
 	if !valid {
@@ -124,12 +123,150 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 
 	newPost := structs.Post{
 		ID:            id,
+		UserID:        user.ID,
 		Author:        user.Username,
 		Title:         html.EscapeString(post.Title),
 		Content:       html.EscapeString(post.Content),
 		Image:         post.Image,
 		CreatedAt:     "Just Now",
 		Privacy:       post.Privacy,
+		TotalLikes:    0,
+		TotalComments: 0,
+		Comments:      nil,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(newPost)
+}
+
+func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	group_id, err := strconv.ParseInt(r.FormValue("group_id"), 10, 64)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Invalid category"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	member, err := database.IsMemberGroup(user.ID, group_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to check if user is a member"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if !member {
+		response := map[string]string{"error": "You are not a member of this group"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		NewPostGroupGet(w, r, user)
+	case http.MethodPost:
+		NewPostGroupPost(w, r, user, group_id)
+	default:
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+}
+
+func NewPostGroupGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
+	categories, err := database.GetCategories()
+	if err != nil {
+		log.Printf("Error retrieving categories: %v", err)
+		response := map[string]string{"error": "Failed to retrieve categories"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(categories)
+}
+
+func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User, group_id int64) {
+	var post structs.Post
+	var err error
+	post.Title = r.FormValue("title")
+	post.Content = r.FormValue("content")
+	post.GroupID = group_id
+	post.CategoryID, err = strconv.ParseInt(r.FormValue("category"), 10, 64)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Invalid category"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	group, err := database.GetGroup(post.GroupID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve groups"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	errors, valid := ValidatePost(post.Title, post.Content, group.Privacy)
+	if !valid {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":  "Validation error",
+			"fields": errors,
+		})
+		return
+	}
+
+	var imagePath string
+	image, header, err := r.FormFile("postImage")
+	if err != nil && err.Error() != "http: no such file" {
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to retrieve image"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if image != nil {
+		imagePath, err = SaveImage(image, header, "../frontend/public/images/")
+		if err != nil {
+			response := map[string]string{"error": err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		newpath := strings.Split(imagePath, "/public")
+		imagePath = newpath[1]
+	}
+
+	id, err := database.CreatePostGroup(user.ID, post.GroupID, post.CategoryID, post.Title, post.Content, imagePath)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to create post"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	newPost := structs.Post{
+		ID:            id,
+		UserID:        user.ID,
+		Author:        user.Username,
+		Title:         html.EscapeString(post.Title),
+		Content:       html.EscapeString(post.Content),
+		Image:         post.Image,
+		CreatedAt:     "Just Now",
+		Privacy:       group.Privacy,
 		TotalLikes:    0,
 		TotalComments: 0,
 		Comments:      nil,
@@ -155,18 +292,31 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var post_id int64
-	err = json.NewDecoder(r.Body).Decode(&post_id)
-
+	post_id, err := strconv.ParseInt(r.URL.Query().Get("post_id"), 10, 64)
 	if err != nil {
-		fmt.Println(err)
-		response := map[string]string{"error": "Invalid request body"}
+		response := map[string]string{"error": "Invalid post ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	post, err := database.GetPost(5)
+	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
+	if err != nil {
+		response := map[string]string{"error": "Invalid group ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	group, err := database.GetGroup(group_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve groups"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	post, err := database.GetPost(user.ID, post_id, group_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve post"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -174,21 +324,108 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post.Privacy == "private" || post.Privacy == "almost_private" && post.Author != user.Username {
-		response := map[string]string{"error": "You are not authorized to view this post"}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
-		return
+	if post.GroupID != 0 {
+		if group.Privacy == "private" {
+			if member, err := database.IsMemberGroup(user.ID, post.GroupID); err != nil || !member {
+				response := map[string]string{"error": "Failed to retrieve group"}
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(response)
+				return
+			}
+		}
+	} else if post.Privacy == "private" || post.Privacy == "almost_private" && post.Author != user.Username {
+		if followed, err := database.IsFollowed(user.ID, post.UserID); err != nil || !followed {
+			response := map[string]string{"error": "You are not authorized to view this post"}
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		if post.Privacy == "almost_private" {
+			if authorized, err := database.IsAuthorized(user.ID, post_id); err != nil || !authorized {
+				response := map[string]string{"error": "You are not authorized to view this post"}
+				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(response)
+				return
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
 }
 
+// func GroupPostHandler(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method != http.MethodGet {
+// 		response := map[string]string{"error": "Method not allowed"}
+// 		w.WriteHeader(http.StatusMethodNotAllowed)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	user, err := GetUserFromSession(r)
+// 	if err != nil || user == nil {
+// 		response := map[string]string{"error": "Failed to retrieve user"}
+// 		w.WriteHeader(http.StatusUnauthorized)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	var group_id int64
+// 	err = json.NewDecoder(r.Body).Decode(&group_id)
+// 	if err != nil {
+// 		response := map[string]string{"error": "Invalid request body"}
+// 		w.WriteHeader(http.StatusBadRequest)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	group, err := database.GetGroup(group_id)
+// 	if err != nil {
+// 		response := map[string]string{"error": "Failed to retrieve groups"}
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	member, err := database.IsMemberGroup(user.ID, group_id)
+// 	if err != nil {
+// 		response := map[string]string{"error": "Failed to check if user is a member"}
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	} else if !member && group.Privacy == "private" {
+// 		response := map[string]string{"error": "You are not authorized to view this post"}
+// 		w.WriteHeader(http.StatusUnauthorized)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	var post_id int64
+// 	err = json.NewDecoder(r.Body).Decode(&post_id)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		response := map[string]string{"error": "Invalid request body"}
+// 		w.WriteHeader(http.StatusBadRequest)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	post, err := database.GetPostGroup(post_id, group_id)
+// 	if err != nil {
+// 		response := map[string]string{"error": "Failed to retrieve post"}
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		json.NewEncoder(w).Encode(response)
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	json.NewEncoder(w).Encode(post)
+// }
+
 func ValidatePost(title, content, privacy string) (map[string]string, bool) {
 	errors := make(map[string]string)
-	const maxTitle = 20
-	const maxContent = 300
+	const maxTitle = 100
+	const maxContent = 2000
 
 	if title == "" {
 		errors["title"] = "Title is required"

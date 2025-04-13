@@ -52,7 +52,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			fmt.Println("1")
-
 			fmt.Println(err)
 			response := map[string]string{"error": "Invalid email or password"}
 			w.WriteHeader(http.StatusUnauthorized)
@@ -68,7 +67,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
 		fmt.Println("2")
-
 		fmt.Println(err)
 		response := map[string]string{"error": "Password is incorrect"}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -158,8 +156,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	register.Privacy = "public"
-
 	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmedPassword, register.Privacy, register.AboutMe, register.DateOfBirth)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
@@ -200,9 +196,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
-	}
-
-	if image != nil {
+	} else if image != nil {
 		imagePath, err = SaveImage(image, header, "../frontend/public/avatars/")
 		if err != nil {
 			fmt.Println("4")
@@ -218,7 +212,32 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		imagePath = "/inconnu/avatar.png"
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+	var coverPath string
+	cover, header, err := r.FormFile("cover")
+	if err != nil && err.Error() != "http: no such file" {
+		fmt.Println("3")
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to retrieve cover"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if cover != nil {
+		coverPath, err = SaveImage(cover, header, "../frontend/public/covers/")
+		if err != nil {
+			fmt.Println("4")
+			fmt.Println(err)
+			response := map[string]string{"error": err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		newpath := strings.Split(coverPath, "/public")
+		coverPath = newpath[1]
+	} else {
+		coverPath = "/inconnu/cover.jpg"
+	}
+
+	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)

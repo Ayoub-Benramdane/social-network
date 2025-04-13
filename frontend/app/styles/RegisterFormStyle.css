@@ -31,7 +31,7 @@ body {
 }
 .inputs {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+    grid-template-columns: repeat(2, 1fr); 
     gap: 16px;
     justify-items: center;
     align-items: center;
@@ -45,7 +45,7 @@ input {
     height: 32px;
     width: 100%;
     color: #A5A5A5;
-    background-color: #1A1C26;
+    /* background-color: #1A1C26; */
     border-radius: 30px;
     border: none;
 }

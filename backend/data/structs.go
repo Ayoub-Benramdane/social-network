@@ -22,6 +22,7 @@ type User struct {
 	ConfirmPass        []byte    `json:"confirm_pass" sqlite:"confirm_pass"`
 	CreatedAt          time.Time `json:"created_at" sqlite:"created_at"`
 	Avatar             string    `json:"avatar" sqlite:"avatar"`
+	Cover              string    `json:"cover" sqlite:"cover"`
 	Bio                string    `json:"bio" sqlite:"bio"`
 	Privacy            string    `json:"privacy" sqlite:"privacy"`
 	TotalPosts         int64     `json:"total_posts" sqlite:"total_posts"`
@@ -39,60 +40,71 @@ type User struct {
 }
 
 type Post struct {
-	ID            int64     `json:"id" sqlite:"id"`
-	Title         string    `json:"title" sqlite:"title"`
-	UserID        int64     `json:"user_id" sqlite:"user_id"`
-	Content       string    `json:"content" sqlite:"content"`
-	CategoryID    int64     `json:"category_id" sqlite:"category_id"`
-	Category      string    `json:"category" sqlite:"category"`
-	Image         string    `json:"image" sqlite:"image"`
-	Author        string    `json:"author" sqlite:"author"`
-	CreatedAt     string    `json:"created_at" sqlite:"created_at"`
-	TotalLikes    int64     `json:"total_likes" sqlite:"total_likes"`
-	TotalComments int64     `json:"total_comments" sqlite:"total_comments"`
-	Comments      []Comment `json:"comments" sqlite:"comments"`
-	Privacy       string    `json:"privacy" sqlite:"privacy"`
+	ID                  int64     `json:"id" sqlite:"id"`
+	Title               string    `json:"title" sqlite:"title"`
+	UserID              int64     `json:"user_id" sqlite:"user_id"`
+	Avatar              string    `json:"avatar" sqlite:"avatar"`
+	Content             string    `json:"content" sqlite:"content"`
+	CategoryID          int64     `json:"category_id" sqlite:"category_id"`
+	GroupName           string    `json:"group_name" sqlite:"group_name"`
+	GroupID             int64     `json:"group_id" sqlite:"group_id"`
+	Category            string    `json:"category" sqlite:"category"`
+	CategoryColor       string    `json:"category_color" sqlite:"category_color"`
+	CategoryBacckground string    `json:"category_background" sqlite:"category_background"`
+	Image               string    `json:"image" sqlite:"image"`
+	Author              string    `json:"author" sqlite:"author"`
+	CreatedAt           string    `json:"created_at" sqlite:"created_at"`
+	TotalLikes          int64     `json:"total_likes" sqlite:"total_likes"`
+	IsLiked             bool      `json:"is_liked" sqlite:"is_liked"`
+	TotalComments       int64     `json:"total_comments" sqlite:"total_comments"`
+	Comments            []Comment `json:"comments" sqlite:"comments"`
+	Privacy             string    `json:"privacy" sqlite:"privacy"`
+	Saved               bool      `json:"saved" sqlite:"saved"`
 }
 
 type Comment struct {
 	ID        int64  `json:"id" sqlite:"id"`
 	PostID    int64  `json:"post_id" sqlite:"post_id"`
+	GroupID   int64  `json:"group_id" sqlite:"group_id"`
 	Content   string `json:"content" sqlite:"content"`
 	Author    string `json:"author" sqlite:"author"`
 	CreatedAt string `json:"created_at" sqlite:"created_at"`
 }
 
 type Category struct {
-	ID   int64  `json:"id" sqlite:"id"`
-	Name string `json:"name" sqlite:"name"`
+	ID    int64  `json:"id" sqlite:"id"`
+	Name  string `json:"name" sqlite:"name"`
+	Count int64  `json:"count" sqlite:"count"`
 }
 
 type Group struct {
-	ID          int64     `json:"id" sqlite:"id"`
-	Name        string    `json:"name" sqlite:"name"`
-	Image       string    `json:"image" sqlite:"image"`
-	Description string    `json:"description" sqlite:"description"`
-	CreatedAt   time.Time `json:"created_at" sqlite:"created_at"`
-	Admin       string    `json:"admin" sqlite:"admin"`
-	Privacy     string    `json:"privacy" sqlite:"privacy"`
-	Members     []User    `json:"members" sqlite:"members"`
+	ID           int64     `json:"id" sqlite:"id"`
+	Name         string    `json:"name" sqlite:"name"`
+	Image        string    `json:"image" sqlite:"image"`
+	Cover        string    `json:"cover" sqlite:"cover"`
+	Description  string    `json:"description" sqlite:"description"`
+	CreatedAt    time.Time `json:"created_at" sqlite:"created_at"`
+	Admin        string    `json:"admin" sqlite:"admin"`
+	Privacy      string    `json:"privacy" sqlite:"privacy"`
+	Members      []User    `json:"members" sqlite:"members"`
+	TotalMembers int64     `json:"total_members" sqlite:"total_members"`
 }
 
 type Message struct {
-	ID               int64     `json:"id" sqlite:"id"`
-	SenderID         int64     `json:"sender_id" sqlite:"sender_id"`
-	SenderUsername   string    `json:"sender_username" sqlite:"sender_username"`
-	ReceiverID       string    `json:"receiver_id" sqlite:"receiver_id"`
-	ReceiverUsername int64     `json:"receiver_username" sqlite:"receiver_username"`
-	Content          string    `json:"content" sqlite:"content"`
-	CreatedAt        time.Time `json:"created_at" sqlite:"created_at"`
-	Read             bool      `json:"read" sqlite:"read"`
+	ID         int64  `json:"id" sqlite:"id"`
+	SenderID   int64  `json:"sender_id" sqlite:"sender_id"`
+	ReceiverID int64  `json:"receiver_id" sqlite:"receiver_id"`
+	Username   string `json:"username" sqlite:"username"`
+	Avatar     string `json:"avatar" sqlite:"avatar"`
+	Content    string `json:"content" sqlite:"content"`
+	Image      string `json:"image" sqlite:"image"`
+	CreatedAt  string `json:"created_at" sqlite:"created_at"`
 }
 
 type Notification struct {
 	ID               int64     `json:"id" sqlite:"id"`
-	UserID           int64     `json:"user_id" sqlite:"user_id"`
-	NotifiedUser     int64     `json:"notified_user" sqlite:"notified_user"`
+	Username         string    `json:"username" sqlite:"username"`
+	Avatar           string    `json:"avatar" sqlite:"avatar"`
 	TypeNotification string    `json:"type_notification" sqlite:"type_notification"`
 	CreatedAt        time.Time `json:"created_at" sqlite:"created_at"`
 	Read             bool      `json:"read" sqlite:"read"`
@@ -103,6 +115,7 @@ type Invitation struct {
 	SenderID int64  `json:"sender_id" sqlite:"sender_id"`
 	GroupID  int64  `json:"group_id" sqlite:"group_id"`
 	Sender   string `json:"sender" sqlite:"sender"`
+	Avatar   string `json:"avatar" sqlite:"avatar"`
 	Group    string `json:"group" sqlite:"group"`
 }
 

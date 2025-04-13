@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "../styles/PostFormStyle.css";
 
 export default function PostForm() {
+  const [showModal, setShowModal] = useState(false);
+  const [followers, setFollowers] = useState([]);
+  const [selectedFollowers, setSelectedFollowers] = useState([]);
   const [postFormInput, setPostFormInput] = useState({
     title: "",
     content: "",
@@ -11,6 +14,31 @@ export default function PostForm() {
   });
   const [imageInputKey, setImageInputKey] = useState(Date.now());
 
+  // Fetch followers when modal opens and privacy is set to almost-private
+  useEffect(() => {
+    if (showModal && postFormInput.privacy === "almost-private") {
+      fetchFollowers();
+    }
+  }, [showModal, postFormInput.privacy]);
+
+  const fetchFollowers = async () => {
+    try {
+      const response = await fetch("http://localhost:8404/followers", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setFollowers(data.followers || []);
+      } else {
+        console.error("Failed to fetch followers");
+      }
+    } catch (error) {
+      console.error("Error fetching followers:", error);
+    }
+  };
+
   const handleImageChange = (event) => {
     const file = event.target.files[0];
     setPostFormInput({
@@ -19,43 +47,47 @@ export default function PostForm() {
     });
   };
 
+  const toggleFollowerSelection = (followerId) => {
+    setSelectedFollowers((prev) => {
+      if (prev.includes(followerId)) {
+        return prev.filter((id) => id !== followerId);
+      } else {
+        return [...prev, followerId];
+      }
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const formData = new FormData();
-
-    // formData.append(
-    //   "postData",
-    //   JSON.stringify({
-    //     title: postFormInput.title,
-    //     content: postFormInput.content,
-    //     privacy: postFormInput.privacy,
-    //     category: postFormInput.category,
-    //   })
-    // );
     const fieldsToInclude = ["title", "content", "privacy", "category"];
 
     fieldsToInclude.forEach((field) => {
       formData.append(field, postFormInput[field]);
     });
 
+    if (
+      postFormInput.privacy === "almost-private" &&
+      selectedFollowers.length > 0
+    ) {
+      formData.append("audience", JSON.stringify(selectedFollowers));
+    }
+
     if (postFormInput.postImage) {
       formData.append("postImage", postFormInput.postImage);
     }
-    console.log(postFormInput);
 
     try {
       const response = await fetch("http://localhost:8404/new_post", {
         method: "POST",
-
         body: formData,
         credentials: "include",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        console.log(data);
-
+        console.error(data);
         throw new Error(data.error || "Failed to create the post");
       }
 
@@ -64,158 +96,233 @@ export default function PostForm() {
         title: "",
         content: "",
         privacy: "",
-        category: "",
+        category: "technology",
         postImage: null,
       });
+      setSelectedFollowers([]);
+      setShowModal(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
   return (
-    <div className="postDiv">
-      <h3 style={{ color: "#18151b" }}>Create a new Post</h3>
-      <form className="create-post-form" onSubmit={handleSubmit}>
-        <div className="form-div">
-          <div className="title-input">
-            <input
-              placeholder="title"
-              required
-              value={postFormInput.title}
-              onChange={(e) => {
-                setPostFormInput({ ...postFormInput, title: e.target.value });
-              }}
-            ></input>
-          </div>
+    <div className="post-form-container">
+      <button
+        className="create-post-btn"
+        onClick={() => setShowModal(true)}
+        style={{
+          backgroundColor: "rgb(174, 0, 255)",
+          width: "150px",
+          height: "32px",
+          border: "none",
+          color: "white",
+          borderRadius: "8px",
+          fontSize: "14px",
+          fontWeight: "500",
+        }}
+      >
+        Create Post
+      </button>
 
-          <div className="content-input">
-            <input
-              placeholder="content"
-              required
-              value={postFormInput.content}
-              onChange={(e) => {
-                setPostFormInput({ ...postFormInput, content: e.target.value });
-              }}
-            ></input>
-          </div>
-          <div className="image-input">
-            <p>Upload Image</p>
-            {postFormInput.postImage && (
-              <div>
-                <img
-                  style={{
-                    width: "150px",
-                    borderRadius: "8px",
-                  }}
-                  src={URL.createObjectURL(postFormInput.postImage)}
-                  alt="Selected"
-                />
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setPostFormInput({
-                      ...postFormInput,
-                      postImage: null,
-                    });
-                    setImageInputKey(Date.now());
-                  }}
-                >
-                  Remove
-                </button>
+      {showModal && (
+        <div className="post-modal-overlay">
+          <div className="post-modal">
+            <div className="post-modal-header">
+              <h3 style={{ color: "#18151b" }}>Create a new Post</h3>
+              <button
+                className="close-modal-btn"
+                onClick={() => setShowModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form className="create-post-form" onSubmit={handleSubmit}>
+              <div className="form-div">
+                <div className="title-input">
+                  <label>Title</label>
+                  <input
+                    placeholder="Enter post title"
+                    required
+                    value={postFormInput.title}
+                    onChange={(e) => {
+                      setPostFormInput({
+                        ...postFormInput,
+                        title: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="content-input">
+                  <label>Content</label>
+                  <textarea
+                    placeholder="What's on your mind?"
+                    required
+                    value={postFormInput.content}
+                    onChange={(e) => {
+                      setPostFormInput({
+                        ...postFormInput,
+                        content: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="image-input">
+                  <label>Upload Image</label>
+                  {postFormInput.postImage && (
+                    <div className="image-preview">
+                      <img
+                        style={{
+                          width: "150px",
+                          borderRadius: "8px",
+                          marginBottom: "10px",
+                        }}
+                        src={URL.createObjectURL(postFormInput.postImage)}
+                        alt="Selected"
+                      />
+                      <button
+                        className="remove-image-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPostFormInput({
+                            ...postFormInput,
+                            postImage: null,
+                          });
+                          setImageInputKey(Date.now());
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    key={imageInputKey}
+                    type="file"
+                    name="postImage"
+                    onChange={handleImageChange}
+                  />
+                </div>
+
+                <div className="category-input">
+                  <label>Category</label>
+                  <select
+                    value={postFormInput.category}
+                    onChange={(e) => {
+                      setPostFormInput({
+                        ...postFormInput,
+                        category: e.target.value,
+                      });
+                    }}
+                  >
+                    <option value="technology">Technology</option>
+                    <option value="sport">Sport</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="privacy-input">
+                  <label>Privacy</label>
+                  <div className="privacy-options">
+                    <label className="privacy-option">
+                      <input
+                        type="radio"
+                        value="private"
+                        name="privacy"
+                        checked={postFormInput.privacy === "private"}
+                        onChange={(e) => {
+                          setPostFormInput({
+                            ...postFormInput,
+                            privacy: e.target.value,
+                          });
+                        }}
+                      />
+                      <span>Private</span>
+                    </label>
+
+                    <label className="privacy-option">
+                      <input
+                        type="radio"
+                        value="public"
+                        name="privacy"
+                        checked={postFormInput.privacy === "public"}
+                        onChange={(e) => {
+                          setPostFormInput({
+                            ...postFormInput,
+                            privacy: e.target.value,
+                          });
+                        }}
+                      />
+                      <span>Public</span>
+                    </label>
+
+                    <label className="privacy-option">
+                      <input
+                        type="radio"
+                        value="almost-private"
+                        name="privacy"
+                        checked={postFormInput.privacy === "almost-private"}
+                        onChange={(e) => {
+                          setPostFormInput({
+                            ...postFormInput,
+                            privacy: e.target.value,
+                          });
+                        }}
+                      />
+                      <span>Almost Private</span>
+                    </label>
+                  </div>
+                </div>
+
+                {postFormInput.privacy === "almost-private" && (
+                  <div className="audience-selector">
+                    <label>Select Audience</label>
+                    <div className="followers-list">
+                      {followers.length > 0 ? (
+                        followers.map((follower) => (
+                          <label key={follower.id} className="follower-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedFollowers.includes(follower.id)}
+                              onChange={() =>
+                                toggleFollowerSelection(follower.id)
+                              }
+                            />
+                            <span>{follower.username}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <p>No followers found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            <input
-              key={imageInputKey}
-              type="file"
-              name="postImage"
-              onChange={handleImageChange}
-            ></input>
-          </div>
 
-          <div className="privacy-input">
-            <input
-              required
-              type="radio"
-              value="private"
-              name="privacy"
-              checked={postFormInput.privacy === "private"}
-              onChange={(e) => {
-                setPostFormInput({ ...postFormInput, privacy: e.target.value });
-              }}
-            />{" "}
-            Private
-            <input
-              type="radio"
-              value="public"
-              name="privacy"
-              checked={postFormInput.privacy === "public"}
-              onChange={(e) => {
-                setPostFormInput({ ...postFormInput, privacy: e.target.value });
-              }}
-            />{" "}
-            Public
-            <input
-              type="radio"
-              value="almost-public"
-              name="privacy"
-              checked={postFormInput.privacy === "almost-private"}
-              onChange={(e) => {
-                setPostFormInput({ ...postFormInput, privacy: e.target.value });
-              }}
-            />{" "}
-            Almost Private
-          </div>
-          <div className="category">
-            <select
-              onChange={(e) => {
-                setPostFormInput({
-                  ...postFormInput,
-                  category: e.target.value,
-                });
-              }}
-            >
-              <option value="technology">Technology</option>
-              <option value="sport">Sport</option>
-              <option value="entertainment">Entertainment</option>
-              <option value="other">Other</option>
-            </select>
+              <button
+                type="submit"
+                className="publish-btn"
+                style={{
+                  backgroundColor: "rgb(174, 0, 255)",
+                  width: "150px",
+                  height: "32px",
+                  border: "none",
+                  color: "white",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  marginTop: "20px",
+                }}
+              >
+                Publish
+              </button>
+            </form>
           </div>
         </div>
-        <button
-          style={{
-            backgroundColor: "rgb(174, 0, 255)",
-            width: "150px",
-            height: "32px",
-            border: "none",
-            color: "white",
-            borderRadius: "8px",
-            fontSize: "14px",
-            fontWeight: "500",
-          }}
-        >
-          Publish
-        </button>
-      </form>
-      {/* <div className="posts-list">
-        <h3>Posts</h3>
-        {posts.length > 0 ? (
-          posts.map((post, index) => (
-            <div key={index} className="post">
-              <h4>{post.Title}</h4>
-              <p>{post.Content}</p>
-              <img
-                src={post.Image}
-                alt="Post"
-                style={{ width: "100px", height: "100px" }}
-              />
-              <div>Categories: {post.Categories.join(", ")}</div>
-              <div>Privacy: {post.Privacy}</div>
-            </div>
-          ))
-        ) : (
-          <p>No posts yet.</p>
-        )}
-      </div> */}
+      )}
     </div>
   );
 }

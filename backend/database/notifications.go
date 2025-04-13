@@ -21,14 +21,14 @@ func CreateNotification(user_id, post_id, notified_id int64, type_notification s
 
 func GetNotifications(notified_id int64) ([]structs.Notification, error) {
 	var notifications []structs.Notification
-	rows, err := DB.Query("SELECT id, user_id, type_notification FROM notifications WHERE user_id = ? ORDER BY created_at DESC", notified_id)
+	rows, err := DB.Query("SELECT n.id, u.username, u.avatar, n.type_notification FROM notifications n JOIN users u ON u.id = n.notified_id WHERE n.notified_id = ? ORDER BY n.created_at DESC", notified_id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var notification structs.Notification
-		err = rows.Scan(&notification.ID, &notification.UserID, &notification.TypeNotification)
+		err = rows.Scan(&notification.ID, &notification.Username, &notification.Avatar, &notification.TypeNotification)
 		if err != nil {
 			return nil, err
 		}

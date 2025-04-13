@@ -1,2 +1,2 @@
 -- +migrate Down
-DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS group_comments;

@@ -25,16 +25,16 @@ func GetInvitationsFriends(user_id int64) ([]structs.Invitation, error) {
 	return invitations, nil
 }
 
-func GetInvitationsGroups(user_id int64) ([]structs.Invitation, error) {
+func GetInvitationsGroups(group_id int64) ([]structs.Invitation, error) {
 	var invitations []structs.Invitation
-	rows, err := DB.Query("SELECT i.id, u.id, g.id, u.username, g.name FROM invitations_groups i JOIN users u ON u.id = i.sender_id JOIN groups g ON i.group_id = g.id WHERE recipient_id = ?", user_id)
+	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar FROM invitations_groups i JOIN users u ON u.id = i.sender_id JOIN groups g ON i.group_id = g.id WHERE g.id = ?", group_id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var invitation structs.Invitation
-		err = rows.Scan(&invitation.ID, &invitation.SenderID, &invitation.GroupID, &invitation.Sender, &invitation.Group)
+		err = rows.Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar)
 		if err != nil {
 			return nil, err
 		}

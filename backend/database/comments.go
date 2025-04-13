@@ -6,7 +6,21 @@ import (
 )
 
 func CreateComment(content string, user_id int64, post structs.Post) (int64, error) {
-	result, err := DB.Exec("INSERT INTO comments (content, user_id, post_id) VALUES (?, ?, ?, ?)", content, user_id, post.ID)
+	result, err := DB.Exec("INSERT INTO comments (content, user_id, post_id) VALUES (?, ?, ?)", content, user_id, post.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	if err = CreateNotification(user_id, post.ID, post.UserID, "comment"); err != nil {
+		return 0, err
+	}
+
+	lastID, err := result.LastInsertId()
+	return lastID, err
+}
+
+func CreateGroupComment(content string, user_id, group_id int64, post structs.Post) (int64, error) {
+	result, err := DB.Exec("INSERT INTO group_comments (content, user_id, post_id, group_id) VALUES (?, ?, ?, ?)", content, user_id, post.ID, group_id)
 	if err != nil {
 		return 0, err
 	}

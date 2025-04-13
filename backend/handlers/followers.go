@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	structs "social-network/data"
 	"social-network/database"
+	"strconv"
 )
 
 func FollowHandler(w http.ResponseWriter, r *http.Request) {
@@ -94,12 +97,40 @@ func FollowersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	followers, err := database.GetFollowers(user.ID)
+	user_id, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve followers"}
+		response := map[string]string{"error": "Invalid user ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	info, err := database.GetProfileInfo(user_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve profile"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
+	}
+
+	followed, err := database.IsFollowed(user.ID, user_id)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to retrieve followings"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	var followers []structs.User
+	if followed || info.Privacy == "public" || user_id == user.ID {
+		followers, err = database.GetFollowers(user.ID)
+		if err != nil {
+			response := map[string]string{"error": "Failed to retrieve followers"}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -122,12 +153,40 @@ func FollowingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	following, err := database.GetFollowing(user.ID)
+	user_id, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve following"}
+		response := map[string]string{"error": "Invalid user ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	info, err := database.GetProfileInfo(user_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve profile"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
+	}
+
+	followed, err := database.IsFollowed(user.ID, user_id)
+	if err != nil {
+		fmt.Println(err)
+		response := map[string]string{"error": "Failed to retrieve followings"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	var following []structs.User
+	if followed || info.Privacy == "public" || user_id == user.ID {
+		following, err = database.GetFollowing(user.ID)
+		if err != nil {
+			response := map[string]string{"error": "Failed to retrieve following"}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

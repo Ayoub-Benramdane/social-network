@@ -60,7 +60,7 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, group := range groups {
-		members, err := database.GetGroupMembers(group.ID, user.ID)
+		members, err := database.GetGroupMembers(group.ID)
 		if err != nil {
 			response := map[string]string{"error": "Failed to retrieve group member"}
 			w.WriteHeader(http.StatusInternalServerError)

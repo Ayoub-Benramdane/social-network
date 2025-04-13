@@ -1,8 +1,31 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import "../styles/NavBar.css";
+// import Notifications from "./NotificationsComponent";
 
 export default function Navbar({ user }) {
+  const [activeLink, setActiveLink] = useState("home");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // async function handleProfile() {
+  //   try {
+  //     const response = await fetch("http://localhost:8404/profile", {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       credentials: "include",
+  //     });
+
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       console.log("profile data: ", data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error logging out:", error);
+  //   }
+  // }
   const handleLogout = async () => {
     try {
       const response = await fetch("http://localhost:8404/logout", {
@@ -14,97 +37,114 @@ export default function Navbar({ user }) {
       });
 
       if (response.ok) {
-        setIsLoggedIn(false);
-        setUser(null);
+        window.location.reload();
       }
     } catch (error) {
       console.error("Error logging out:", error);
     }
   };
+
+  const toggleProfileMenu = () => {
+    setShowProfileMenu(!showProfileMenu);
+  };
+
   return (
-    <div className="navbar">
+    <nav className="navbar">
       <div className="navbar-left">
         <div className="logo">
-          <img src="./icons/logo.svg" alt="Logo" width={24} height={24} />
+          <img src="./icons/logo.svg" alt="Logo" />
+          {/* <span className="logo-text">Social</span> */}
         </div>
 
         <div className="nav-links">
-          <div className="home-link">
-            <img src="./icons/home.svg" alt="Home" width={20} height={20} />
+          <button
+            className={`nav-link ${activeLink === "home" ? "active" : ""}`}
+            onClick={() => setActiveLink("home")}
+          >
+            <img src="./icons/home.svg" alt="Home" />
             <span>Home</span>
-          </div>
-          <div className="icon-link">
-            <img
-              src="./icons/message.svg"
-              alt="Messages"
-              width={20}
-              height={20}
-            />
-          </div>
-          <div className="icon-link">
-            <img
-              src="./icons/notification.svg"
-              alt="Notifications"
-              width={20}
-              height={20}
-            />
-          </div>
+          </button>
+
+          <button
+            className={`nav-link ${activeLink === "groups" ? "active" : ""}`}
+            onClick={() => setActiveLink("groups")}
+          >
+            <img src="./icons/groups.svg" alt="Groups" />
+            <span>Groups</span>
+          </button>
+
+          <button
+            className={`nav-link ${activeLink === "events" ? "active" : ""}`}
+            onClick={() => setActiveLink("events")}
+          >
+            <img src="./icons/events.svg" alt="Events" />
+            <span>Events</span>
+          </button>
         </div>
       </div>
 
       <div className="search-bar">
         <div className="search-input-container">
+          <img src="./icons/search.svg" alt="Search" className="search-icon" />
           <input type="text" placeholder="Search users and groups" />
-          <img
-            src="./icons/search.svg"
-            alt="Search"
-            width={16}
-            height={16}
-            className="search-icon"
-          />
         </div>
       </div>
 
       <div className="user-actions">
-        <div className="notification-badge">
-          <div className="badge">1</div>
-          <img
-            className="notification-icon"
-            src="./icons/notification.svg"
-            alt="Notifications"
-            width={20}
-            height={20}
-          />
-        </div>
-        <div className="message-badge">
-          <div className="badge">3</div>
-          <img
-            src="./icons/message.svg"
-            alt="Messages"
-            width={20}
-            height={20}
-          />
-        </div>
-        <div className="user-profile">
-          {/* <div className="user-name-avatar"> */}
+        {/* <Notifications></Notifications> */}
+
+        <button className="action-icon notification-badge">
+          <img src="./icons/notification.svg" alt="Notifications" />
+          {user.notifications > 0 && (
+            <span className="badge">{user.notifications || 1}</span>
+          )}
+        </button>
+
+        <button className="action-icon message-badge">
+          <img src="./icons/message.svg" alt="Messages" />
+          {user.messages > 0 && (
+            <span className="badge">{user.messages || 3}</span>
+          )}
+        </button>
+
+        <div className="profile-dropdown">
+          <button className="profile-button" onClick={toggleProfileMenu}>
             <img
               src={user.avatar}
               alt={user.username || "User"}
               className="user-avatar"
             />
-            <span>{`${user.first_name} ${user.last_name}`}</span>
-          {/* </div> */}
-
-          <button onClick={handleLogout} className="logoutBtn">
-            {/* <img
-              src={"./icons/logout.svg"}
-              alt="logout"
-              className="logout-icon"
-            /> */}
-            <span>Logout</span>
+            <div className="user-info">
+              <span className="user-name">{`${user.first_name} ${user.last_name}`}</span>
+              <span className="user-username">
+                @{user.username || "username"}
+              </span>
+            </div>
+            <img
+              src="./icons/drop-down.svg"
+              alt="Menu"
+              className={`dropdown-icon ${showProfileMenu ? "rotate" : ""}`}
+            />
           </button>
+
+          {showProfileMenu && (
+            <div className="profile-menu">
+              <a
+                // onClick={handleProfile}
+                href="/profile"
+                className="menu-item"
+              >
+                <img src="./icons/user.svg" alt="Profile" />
+                <span>My Profile</span>
+              </a>
+              <button onClick={handleLogout} className="menu-item logout-item">
+                <img src="./icons/logout.svg" alt="Logout" />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </nav>
   );
 }

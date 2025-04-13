@@ -84,6 +84,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		imagePath = "/inconnu/events.jpg"
 	}
+
 	id, err := database.CreateEvent(user.ID, event.Name, event.Description, event.Location, event.StartDate, event.EndDate, event.GroupID, imagePath)
 	if err != nil {
 		response := map[string]string{"error": "Failed to create event"}
@@ -106,6 +107,71 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(newEvent)
+}
+
+func GetEventHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
+	if err != nil {
+		response := map[string]string{"error": "Invalid group ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	event_id, err := strconv.ParseInt(r.URL.Query().Get("event_id"), 10, 64)
+	if err != nil {
+		response := map[string]string{"error": "Invalid event ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	_, err = database.GetGroup(group_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve group"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	member, err := database.IsMemberGroup(user.ID, group_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to check if user is a member"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if !member {
+		response := map[string]string{"error": "User is not a member of the group"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	event, err := database.GetEvent(event_id)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve event"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(event)
 }
 
 func ValidateEvent(name, description, location string, startDate, endDate time.Time) (map[string]string, bool) {
