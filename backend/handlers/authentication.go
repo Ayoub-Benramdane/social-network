@@ -10,9 +10,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"social-network/database"
-
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/bcrypt"
 )

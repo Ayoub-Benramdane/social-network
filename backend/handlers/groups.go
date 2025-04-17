@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"html"
 	"net/http"
 	structs "social-network/data"
@@ -59,7 +60,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 		newpath := strings.Split(imagePath, "/public")
 		imagePath = newpath[1]
 	} else {
-		imagePath = "/inconnu/Group.jpeg"
+		imagePath = "/inconnu/group.jpeg"
 	}
 
 	var coverPath string
@@ -85,6 +86,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 
 	id_group, err := database.CreateGroup(user.ID, group.Name, group.Description, imagePath, coverPath, group.Privacy)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Failed to create group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -107,6 +109,34 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(newGroup)
+}
+
+func GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	groups, err := database.GetGroups(user.ID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve groups"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(groups)
 }
 
 func GroupHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,9 +163,9 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := database.GetGroup(group_id)
+	group, err := database.GetGroupById(group_id)
 	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve groups"}
+		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -161,7 +191,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 	members := []structs.User{}
 	invitations := []structs.Invitation{}
 	if member || group.Privacy == "public" {
-		posts, err = database.GetPostsGroup(group_id, user.ID)
+		posts, err = database.GetPostsGroup(group_id, user.ID, group.Privacy)
 		if err != nil {
 			response := map[string]string{"error": "Failed to retrieve posts"}
 			w.WriteHeader(http.StatusInternalServerError)

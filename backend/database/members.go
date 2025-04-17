@@ -20,7 +20,7 @@ func IsMemberGroup(group_id, user_id int64) (bool, error) {
 
 func GetGroupMembers(group_id int64) ([]structs.User, error) {
 	var members []structs.User
-	rows, err := DB.Query("SELECT u.id, u.username, u.image FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = ?", group_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = ?", group_id)
 	if err != nil {
 		return nil, err
 	}

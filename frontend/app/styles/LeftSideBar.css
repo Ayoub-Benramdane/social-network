@@ -102,19 +102,6 @@ body {
   scrollbar-color: #CBD5E1 #F1F5F9;
 }
 
-.user-list::-webkit-scrollbar, .category-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.user-list::-webkit-scrollbar-track, .category-list::-webkit-scrollbar-track {
-  background: #F1F5F9;
-  border-radius: 10px;
-}
-
-.user-list::-webkit-scrollbar-thumb, .category-list::-webkit-scrollbar-thumb {
-  background-color: #CBD5E1;
-  border-radius: 10px;
-}
 
 .user-item {
   display: flex;

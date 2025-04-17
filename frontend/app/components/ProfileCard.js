@@ -84,12 +84,10 @@ function PostFormModal({ onClose, user, onPostCreated }) {
   const [showAudienceSelector, setShowAudienceSelector] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch data when the modal opens
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Use useEffect to watch for changes in privacy setting
   useEffect(() => {
     if (postFormInput.privacy === "almost_private") {
       setShowAudienceSelector(true);
@@ -109,7 +107,6 @@ function PostFormModal({ onClose, user, onPostCreated }) {
       if (response.ok) {
         const data = await response.json();
 
-        // Extract users and categories from the response
         if (data.Users && Array.isArray(data.Users)) {
           setFollowers(data.Users);
         }
@@ -117,7 +114,6 @@ function PostFormModal({ onClose, user, onPostCreated }) {
         if (data.Categories && Array.isArray(data.Categories)) {
           setCategories(data.Categories);
 
-          // Set the first category ID as default if available
           if (data.Categories.length > 0) {
             setPostFormInput((prev) => ({
               ...prev,
@@ -147,13 +143,11 @@ function PostFormModal({ onClose, user, onPostCreated }) {
     const isSelected = selectedFollowers.includes(follower.id);
 
     if (isSelected) {
-      // Remove follower
       setSelectedFollowers((prev) => prev.filter((id) => id !== follower.id));
       setSelectedFollowerNames((prev) =>
         prev.filter((name) => name !== follower.username)
       );
     } else {
-      // Add follower
       setSelectedFollowers((prev) => [...prev, follower.id]);
       setSelectedFollowerNames((prev) => [...prev, follower.username]);
     }
@@ -165,12 +159,10 @@ function PostFormModal({ onClose, user, onPostCreated }) {
 
     const formData = new FormData();
 
-    // Add title, content, and privacy
     formData.append("title", postFormInput.title);
     formData.append("content", postFormInput.content);
     formData.append("privacy", postFormInput.privacy);
 
-    // Add category ID instead of category name
     formData.append("category", postFormInput.categoryId.toString());
 
     if (
@@ -199,7 +191,6 @@ function PostFormModal({ onClose, user, onPostCreated }) {
 
       const responseData = await response.json();
 
-      // Create a new post object with the data we have
       const newPost = {
         id: responseData.id || Date.now(),
         title: postFormInput.title,
@@ -212,15 +203,12 @@ function PostFormModal({ onClose, user, onPostCreated }) {
           categories.find((c) => c.id === postFormInput.categoryId)?.name || "",
         total_likes: 0,
         total_comments: 0,
-        // Add image if available
         image: postFormInput.postImage
           ? URL.createObjectURL(postFormInput.postImage)
           : null,
-        // Use user's avatar for the author
         avatar: user.avatar || "avatar.jpg",
       };
 
-      // Call the callback function to add the new post to the posts array
       if (onPostCreated) {
         onPostCreated(newPost);
       }
@@ -264,7 +252,7 @@ function PostFormModal({ onClose, user, onPostCreated }) {
               <textarea
                 id="post-content"
                 className="form-control"
-                placeholder="What's on your mind?"
+                placeholder="Post Content..."
                 required
                 value={postFormInput.content}
                 onChange={(e) => {

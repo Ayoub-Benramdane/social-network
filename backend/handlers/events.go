@@ -37,6 +37,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	event.StartDate, err = time.Parse("2006-01-02", r.FormValue("start_date"))
 	if err != nil {
 		response := map[string]string{"error": "Invalid start date"}
@@ -44,10 +45,25 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	event.EndDate, err = time.Parse("2006-01-02", r.FormValue("end_date"))
 	if err != nil {
 		response := map[string]string{"error": "Invalid end date"}
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if _, err := database.GetGroupById(event.GroupID); err != nil {
+		response := map[string]string{"error": "Failed to retrieve group"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if member, err := database.IsMemberGroup(user.ID, event.GroupID); err != nil || !member {
+		response := map[string]string{"error": "User is not a member of the group"}
+		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
@@ -141,7 +157,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = database.GetGroup(group_id)
+	_, err = database.GetGroupById(group_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)

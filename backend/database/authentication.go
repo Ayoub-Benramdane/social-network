@@ -39,3 +39,9 @@ func DeleteSession(user_id int64) error {
 	_, err := DB.Exec("UPDATE users SET session_token = ? WHERE id = ?", "", user_id)
 	return err
 }
+
+func GetUserById(user_id int64) (structs.User, error) {
+	var user structs.User
+	err := DB.QueryRow("SELECT id, username, avatar, privacy FROM users WHERE id = ?", user_id).Scan(&user.ID, &user.Username, &user.Avatar, &user.Privacy)
+	return user, err
+}

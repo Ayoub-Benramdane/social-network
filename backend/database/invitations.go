@@ -52,3 +52,12 @@ func DeleteInvitationGroup(user_id, invited_id int64) error {
 	_, err := DB.Exec("DELETE FROM invitations_groups WHERE user_id = ? AND invited_id = ?", user_id, invited_id)
 	return err
 }
+
+func CheckInvitation(user_id, invited_id int64) (bool, error) {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM invitations WHERE user_id = ? AND invited_id = ?", user_id, invited_id).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

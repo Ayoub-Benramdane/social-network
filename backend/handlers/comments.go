@@ -93,7 +93,7 @@ func CreateGroupCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = database.GetGroup(comment.GroupID)
+	_, err = database.GetGroupById(comment.GroupID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)

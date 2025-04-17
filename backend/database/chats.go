@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-func SendMessage(sender_id, receiver_id int64, content, image string) (int64, error) {
-	result, err := DB.Exec("INSERT INTO messages (sender_id, receiver_id, content, image) VALUES (?, ?, ?, ?)", sender_id, receiver_id, content, image)
-	if err != nil {
-		return 0, err
+func SendMessage(sender_id, receiver_id, group_id int64, content, image string) error {
+	if group_id != 0 {
+		_, err := DB.Exec("INSERT INTO group_messages (sender_id, group_id, message, status) VALUES (?, ?, ?, ?)", sender_id, group_id, content, "unread")
+		return err
 	}
-	message_id, err := result.LastInsertId()
-	return message_id, err
+	_, err := DB.Exec("INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)", sender_id, receiver_id, content)
+	return err
 }
 
 func GetConversation(user_id, receiver_id int64) ([]structs.Message, error) {
-	rows, err := DB.Query("SELECT m.id, u.username, u.avatar, m.content, m.chat_image, m.created_at FROM messages m JOIN users u ON u.id = m.sender_id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.created_at ASC", user_id, receiver_id, receiver_id, user_id)
+	rows, err := DB.Query("SELECT m.id, u.username, u.avatar, m.content, m.created_at FROM messages m JOIN users u ON u.id = m.sender_id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.created_at ASC", user_id, receiver_id, receiver_id, user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func GetConversation(user_id, receiver_id int64) ([]structs.Message, error) {
 	for rows.Next() {
 		var chat structs.Message
 		var date time.Time
-		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &chat.Image, &date); err != nil {
+		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &date); err != nil {
 			return nil, err
 		}
 		chat.CreatedAt = TimeAgo(date)

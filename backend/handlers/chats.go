@@ -27,7 +27,7 @@ func ChatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	receiver_id, err := strconv.ParseInt(r.URL.Query().Get("chat_id"), 10, 64)
+	receiver_id, err := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
 	if err != nil {
 		response := map[string]string{"error": "Invalid receiver ID"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -84,7 +84,7 @@ func ChatGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = database.GetGroup(group_id)
+	_, err = database.GetGroupById(group_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -136,6 +136,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	var message structs.Message
 	message.ReceiverID, err = strconv.ParseInt(r.FormValue("receiver_id"), 10, 64)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Invalid receiver ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -165,8 +166,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		imagePath = newpath[1]
 	}
 
-	id, err := database.SendMessage(user.ID, message.ReceiverID, message.Content, imagePath)
-	if err != nil {
+	if database.SendMessage(user.ID, message.ReceiverID, 0, message.Content, imagePath) != nil {
 		response := map[string]string{"error": "Failed to send message"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -174,7 +174,6 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newMessage := structs.Message{
-		ID:        id,
 		Username:  user.Username,
 		Avatar:    message.Avatar,
 		Content:   html.EscapeString(message.Content),

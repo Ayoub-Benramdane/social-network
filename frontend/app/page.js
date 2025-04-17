@@ -71,7 +71,6 @@ export default function Home() {
     }
   };
 
-  // Function to add a new post to the posts array
   const addNewPost = (newPost) => {
     setPosts((prevPosts) => [newPost, ...prevPosts]);
   };
@@ -95,7 +94,6 @@ export default function Home() {
 
         <div className="main-content">
           <div className="grid-layout">
-            {/* Left Sidebar */}
             <div className="left-column">
               <LeftSidebar
                 users={homeData.suggested_users}
@@ -109,7 +107,7 @@ export default function Home() {
 
             <div className="right-column">
               <ProfileCard user={homeData.user} onPostCreated={addNewPost} />
-              {/* <TopGroups groups={homeData.other_groups} /> */}
+              <TopGroups groups={homeData.suggested_groups} />
             </div>
           </div>
         </div>
@@ -117,6 +115,7 @@ export default function Home() {
         <ChatWidget
           users={homeData.connections}
           groups={homeData.my_groups}
+          myData={homeData.user}
         />
       </div>
     );

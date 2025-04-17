@@ -148,11 +148,33 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group_id, err := strconv.ParseInt(r.FormValue("group_id"), 10, 64)
-	if err != nil {
-		fmt.Println(err)
-		response := map[string]string{"error": "Invalid category"}
-		w.WriteHeader(http.StatusBadRequest)
+	var group_id int64
+	if r.Method == http.MethodGet {
+		group_id, err = strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
+		if err != nil {
+			response := map[string]string{"error": "Invalid group ID"}
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	} else if r.Method == http.MethodPost {
+		group_id, err = strconv.ParseInt(r.FormValue("group_id"), 10, 64)
+		if err != nil {
+			response := map[string]string{"error": "Invalid group ID"}
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	} else {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if _, err = database.GetGroupById(group_id); err != nil {
+		response := map[string]string{"error": "Failed to retrieve group"}
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
@@ -172,7 +194,7 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		NewPostGroupGet(w, r, user)
+		NewPostGroupGet(w, r)
 	case http.MethodPost:
 		NewPostGroupPost(w, r, user, group_id)
 	default:
@@ -183,7 +205,7 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewPostGroupGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
+func NewPostGroupGet(w http.ResponseWriter, r *http.Request) {
 	categories, err := database.GetCategories()
 	if err != nil {
 		log.Printf("Error retrieving categories: %v", err)
@@ -210,7 +232,7 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	group, err := database.GetGroup(post.GroupID)
+	group, err := database.GetGroupById(post.GroupID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -308,7 +330,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := database.GetGroup(group_id)
+	group, err := database.GetGroupById(group_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -379,7 +401,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 // 		return
 // 	}
 
-// 	group, err := database.GetGroup(group_id)
+// 	group, err := database.GetGroupById(group_id)
 // 	if err != nil {
 // 		response := map[string]string{"error": "Failed to retrieve groups"}
 // 		w.WriteHeader(http.StatusInternalServerError)

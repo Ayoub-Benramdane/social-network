@@ -17,6 +17,12 @@ func AddFollower(follower_id, following_id int64) error {
 
 func RemoveFollower(follower_id, following_id int64) error {
 	_, err := DB.Exec("DELETE FROM follows WHERE follower_id = ? AND following_id = ?", follower_id, following_id)
+	if err != nil {
+		return err
+	}
+	if err = DeleteNotification(follower_id, 0, following_id, "follow"); err != nil {
+		return err
+	}
 	return err
 }
 

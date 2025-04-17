@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"social-network/database"
 )
@@ -25,14 +26,15 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 	var post_id int64
 	err = json.NewDecoder(r.Body).Decode(&post_id)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Invalid request"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-
 	post, err := database.GetPost(user.ID, post_id, 0)
 	if err != nil {
+		fmt.Println(err)
 		response := map[string]string{"error": "Post not found"}
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(response)
@@ -47,8 +49,11 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	post.TotalLikes = count
+	post.IsLiked = !post.IsLiked
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(count)
+	json.NewEncoder(w).Encode(post)
 }
 
 func LikeGroupHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +101,9 @@ func LikeGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	post.TotalLikes = count
+	post.IsLiked = !post.IsLiked
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(count)
+	json.NewEncoder(w).Encode(post)
 }

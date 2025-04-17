@@ -38,7 +38,7 @@ func SaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := database.GetGroup(int64(ids.GroupID))
+	group, err := database.GetGroupById(int64(ids.GroupID))
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve groups"}
 		w.WriteHeader(http.StatusInternalServerError)

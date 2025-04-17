@@ -40,26 +40,26 @@ type User struct {
 }
 
 type Post struct {
-	ID                  int64     `json:"id" sqlite:"id"`
-	Title               string    `json:"title" sqlite:"title"`
-	UserID              int64     `json:"user_id" sqlite:"user_id"`
-	Avatar              string    `json:"avatar" sqlite:"avatar"`
-	Content             string    `json:"content" sqlite:"content"`
-	CategoryID          int64     `json:"category_id" sqlite:"category_id"`
-	GroupName           string    `json:"group_name" sqlite:"group_name"`
-	GroupID             int64     `json:"group_id" sqlite:"group_id"`
-	Category            string    `json:"category" sqlite:"category"`
-	CategoryColor       string    `json:"category_color" sqlite:"category_color"`
-	CategoryBacckground string    `json:"category_background" sqlite:"category_background"`
-	Image               string    `json:"image" sqlite:"image"`
-	Author              string    `json:"author" sqlite:"author"`
-	CreatedAt           string    `json:"created_at" sqlite:"created_at"`
-	TotalLikes          int64     `json:"total_likes" sqlite:"total_likes"`
-	IsLiked             bool      `json:"is_liked" sqlite:"is_liked"`
-	TotalComments       int64     `json:"total_comments" sqlite:"total_comments"`
-	Comments            []Comment `json:"comments" sqlite:"comments"`
-	Privacy             string    `json:"privacy" sqlite:"privacy"`
-	Saved               bool      `json:"saved" sqlite:"saved"`
+	ID                 int64     `json:"id" sqlite:"id"`
+	Title              string    `json:"title" sqlite:"title"`
+	UserID             int64     `json:"user_id" sqlite:"user_id"`
+	Avatar             string    `json:"avatar" sqlite:"avatar"`
+	Content            string    `json:"content" sqlite:"content"`
+	CategoryID         int64     `json:"category_id" sqlite:"category_id"`
+	GroupName          string    `json:"group_name" sqlite:"group_name"`
+	GroupID            int64     `json:"group_id" sqlite:"group_id"`
+	Category           string    `json:"category" sqlite:"category"`
+	CategoryColor      string    `json:"category_color" sqlite:"category_color"`
+	CategoryBackground string    `json:"category_background" sqlite:"category_background"`
+	Image              string    `json:"image" sqlite:"image"`
+	Author             string    `json:"author" sqlite:"author"`
+	CreatedAt          string    `json:"created_at" sqlite:"created_at"`
+	TotalLikes         int64     `json:"total_likes" sqlite:"total_likes"`
+	IsLiked            bool      `json:"is_liked" sqlite:"is_liked"`
+	TotalComments      int64     `json:"total_comments" sqlite:"total_comments"`
+	Comments           []Comment `json:"comments" sqlite:"comments"`
+	Privacy            string    `json:"privacy" sqlite:"privacy"`
+	Saved              bool      `json:"saved" sqlite:"saved"`
 }
 
 type Comment struct {
@@ -93,12 +93,14 @@ type Group struct {
 type Message struct {
 	ID         int64  `json:"id" sqlite:"id"`
 	SenderID   int64  `json:"sender_id" sqlite:"sender_id"`
+	GroupID    int64  `json:"group_id" sqlite:"group_id"`
 	ReceiverID int64  `json:"receiver_id" sqlite:"receiver_id"`
 	Username   string `json:"username" sqlite:"username"`
 	Avatar     string `json:"avatar" sqlite:"avatar"`
 	Content    string `json:"content" sqlite:"content"`
 	Image      string `json:"image" sqlite:"image"`
 	CreatedAt  string `json:"created_at" sqlite:"created_at"`
+	Type       string `json:"type" sqlite:"type"`
 }
 
 type Notification struct {
@@ -130,7 +132,7 @@ type Event struct {
 	Location    string    `json:"location" sqlite:"location"`
 	StartDate   time.Time `json:"start_date" sqlite:"start_date"`
 	EndDate     time.Time `json:"end_date" sqlite:"end_date"`
-	CreatedAt   time.Time `json:"created_at" sqlite:"created_at"`
+	CreatedAt   string    `json:"created_at" sqlite:"created_at"`
 	Creator     string    `json:"creator" sqlite:"creator"`
 	Attendees   []User    `json:"attendees" sqlite:"attendees"`
 }

@@ -16,6 +16,22 @@ body {
   border-radius: 12px;
   overflow: hidden;
 }
+.action-button.liked {
+  background-color: #e7e7e7 ;
+
+  /* background-color: #B8C3E1 ; */
+
+  color: #3555F9;
+}
+.action-button.saved {
+  background-color: #e7e7e7 ;
+
+  /* background-color: #B8C3E1 ; */
+
+  color: #3555F9;
+}
+
+
 
 
 
@@ -121,8 +137,8 @@ body {
 
 .post-category {
   display: inline-block;
-  background-color: #f0f2f5;
-  color: #555;
+  /* background-color: #f0f2f5; */
+  /* color: #555; */
   font-size: 12px;
   font-weight: 500;
   padding: 4px 10px;
@@ -131,6 +147,7 @@ body {
 }
 
 .post-actions {
+  /* background-color: #e7e7e7; */
   display: flex;
   padding: 0 16px 16px;
   gap: 16px;
@@ -148,6 +165,11 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s;
+  /* background-color: #B8C3E1 ; */
+  background-color: #e7e7e7 ; 
+   
+  
+
   color: #555;
   font-size: 14px;
 }

@@ -25,6 +25,10 @@ func LikePost(user_id int64, post structs.Post) (int64, error) {
 
 	var count int64
 	err = DB.QueryRow("SELECT COUNT(*) FROM post_likes WHERE post_id = ?", post.ID).Scan(&count)
+	if err != nil {
+
+	}
+	_, err = DB.Exec("UPDATE posts SET total_likes = ? WHERE id = ?", count, post.ID)
 	return count, err
 }
 

@@ -15,6 +15,7 @@ export default function AuthForm({ onLoginSuccess }) {
     dateOfBirth: "",
     aboutMe: "",
     avatar: null,
+    cover: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -50,12 +51,27 @@ export default function AuthForm({ onLoginSuccess }) {
       avatar: file,
     });
   };
+  const handleCoverChange = (e) => {
+    const file = e.target.files[0];
+    setFormData({
+      ...formData,
+      cover: file,
+    });
+  };
 
   const removeImage = (e) => {
     e.preventDefault();
     setFormData({
       ...formData,
       avatar: null,
+    });
+    setImageInputKey(Date.now());
+  };
+  const removeCover = (e) => {
+    e.preventDefault();
+    setFormData({
+      ...formData,
+      cover: null,
     });
     setImageInputKey(Date.now());
   };
@@ -185,7 +201,7 @@ export default function AuthForm({ onLoginSuccess }) {
         <div className="auth-header">
           <div className="auth-logo">
             <img src="./icons/logo.svg" alt="Logo" />
-            <h1>Social</h1>
+            {/* <h1>Social</h1> */}
           </div>
 
           <h2 className="auth-title">
@@ -194,8 +210,8 @@ export default function AuthForm({ onLoginSuccess }) {
 
           <p className="auth-subtitle">
             {isLogin
-              ? "Enter your credentials to access your account"
-              : "Fill in the form to start your journey with us"}
+              ? "Enter your credentials."
+              : "Register a new account"}
           </p>
         </div>
 
@@ -339,6 +355,44 @@ export default function AuthForm({ onLoginSuccess }) {
                       <span className="file-name">
                         {formData.avatar
                           ? formData.avatar.name
+                          : "No file chosen"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Profile Cover</label>
+                  {formData.cover ? (
+                    <div className="image-preview">
+                      <img
+                        src={URL.createObjectURL(formData.cover)}
+                        alt="Profile Preview"
+                      />
+                      <button
+                        className="remove-image-button"
+                        onClick={removeCover}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="file-upload">
+                      <input
+                        type="file"
+                        id="avatar"
+                        name="avatar"
+                        key={imageInputKey}
+                        onChange={handleCoverChange}
+                        accept="image/*"
+                        className="file-input"
+                      />
+                      <label htmlFor="avatar" className="file-label">
+                        <img src="./icons/upload.svg" alt="" />
+                        Choose File
+                      </label>
+                      <span className="file-name">
+                        {formData.cover
+                          ? formData.cover.name
                           : "No file chosen"}
                       </span>
                     </div>

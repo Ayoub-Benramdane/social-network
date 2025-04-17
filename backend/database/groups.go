@@ -5,7 +5,7 @@ import (
 )
 
 func CreateGroup(admin int64, name, description, image, cover, privacy string) (int64, error) {
-	result, err := DB.Exec("INSERT INTO groups (name, description, image, cover, admin, privacy) VALUES (?, ?, ?, ?, ?, ?, ?)", name, description, image, cover, admin, privacy)
+	result, err := DB.Exec("INSERT INTO groups (name, description, image, cover, admin, privacy) VALUES (?, ?, ?, ?, ?, ?)", name, description, image, cover, admin, privacy)
 	if err != nil {
 		return 0, err
 	}
@@ -49,7 +49,7 @@ func GetOtherGroups(user_id int64) ([]structs.Group, error) {
 	return groups, nil
 }
 
-func GetGroup(group_id int64) (structs.Group, error) {
+func GetGroupById(group_id int64) (structs.Group, error) {
 	var group structs.Group
 	err := DB.QueryRow("SELECT id, name, description, image, cover, admin, privacy FROM groups WHERE id = ?", group_id).Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.Admin, &group.Privacy)
 	return group, err

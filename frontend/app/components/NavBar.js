@@ -37,6 +37,8 @@ export default function Navbar({ user }) {
       });
 
       if (response.ok) {
+        console.log("Logout");
+        
         window.location.reload();
       }
     } catch (error) {
@@ -53,7 +55,7 @@ export default function Navbar({ user }) {
       <div className="navbar-left">
         <div className="logo">
           <img src="./icons/logo.svg" alt="Logo" />
-          {/* <span className="logo-text">Social</span> */}
+          {/* <span className="logo-text">Social Network</span> */}
         </div>
 
         <div className="nav-links">
@@ -95,8 +97,8 @@ export default function Navbar({ user }) {
 
         <button className="action-icon notification-badge">
           <img src="./icons/notification.svg" alt="Notifications" />
-          {user.notifications > 0 && (
-            <span className="badge">{user.notifications || 1}</span>
+          {user.total_notifications > 0 && (
+            <span className="badge">{user.total_notifications || 1}</span>
           )}
         </button>
 
