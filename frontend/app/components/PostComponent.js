@@ -1,13 +1,53 @@
 "use client";
 import { useState } from "react";
+// import { useRouter } from "next/navigation";
+// import { useRouter } from "next/router";
+
 import "../styles/PostComponent.css";
 
 export default function PostComponent({ posts: initialPosts }) {
+  // const router = useRouter();
   const [posts, setPosts] = useState(initialPosts);
   const [savedMessage, setSavedMessage] = useState("");
+  const [commentDiv, setCommentDiv] = useState(false);
 
+  // function navigateToPost(postId) {
+  //   router.push(`/posts/${postId}`);
+  // }
   async function handleComment(postId) {
-    console.log(postId);
+    try {
+      const response = await fetch("http://localhost:8404/comment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(postId),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.log(data);
+      }
+      if (response.ok) {
+        const updatedPost = await response.json();
+
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  total_comments: updatedPost.total_comments,
+                }
+              : post
+          )
+        );
+
+        console.log(updatedPost);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   }
   async function handleSave(postId) {
     setSavedMessage(`Post ${postId} saved!`);
@@ -164,7 +204,7 @@ export default function PostComponent({ posts: initialPosts }) {
 
             <button
               className="action-button action-comment"
-              onClick={() => handleComment(post.id)}
+              onClick={() => setCommentDiv(!commentDiv)}
             >
               <svg
                 width="24"
@@ -216,10 +256,53 @@ export default function PostComponent({ posts: initialPosts }) {
               </div>
             )}
           </div>
+          <div
+            className="comment-div"
+            style={{
+              display: commentDiv ? "block" : "none",
+              paddingLeft: "20px",
+              paddingRight: "20px",
+            }}
+          >
+            <input
+              style={{
+                width: "100%",
+                marginBottom: "10px",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #ccc",
+              }}
+              type="text"
+              className="comment-input"
+              placeholder="Write a comment..."
+            />
+            <button
+              style={{
+                backgroundColor: "#2563EB",
+                color: "white",
+                padding: "10px 20px",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "400",
+              }}
+              className="comment-button"
+              onClick={() => handleComment(post.id)}
+            >
+              Comment
+            </button>
+          </div>
+          <a key={post.id} href={`/post/${post.id}`} className="post-link">
 
-          <button className="see-post-button">
-            See post <span className="arrow">→</span>
-          </button>
+            <button
+              className="see-post-button"
+
+              // onClick={() => navigateToPost(post.id)}
+            >
+              See post <span className="arrow">→</span>
+            </button>
+          </a>
         </div>
       ))}
     </div>

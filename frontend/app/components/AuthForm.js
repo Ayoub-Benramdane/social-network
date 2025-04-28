@@ -7,7 +7,7 @@ export default function AuthForm({ onLoginSuccess }) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-
+    privacy: "",
     username: "",
     firstName: "",
     lastName: "",
@@ -148,9 +148,14 @@ export default function AuthForm({ onLoginSuccess }) {
       registerData.append("confirmedPassword", formData.confirmedPassword);
       registerData.append("dateOfBirth", formData.dateOfBirth);
       registerData.append("aboutMe", formData.aboutMe);
+      registerData.append("privacy", formData.privacy);
 
       if (formData.avatar) {
         registerData.append("avatar", formData.avatar);
+      }
+
+      if (formData.cover) {
+        registerData.append("cover", formData.cover);
       }
 
       const response = await fetch("http://localhost:8404/register", {
@@ -209,9 +214,7 @@ export default function AuthForm({ onLoginSuccess }) {
           </h2>
 
           <p className="auth-subtitle">
-            {isLogin
-              ? "Enter your credentials."
-              : "Register a new account"}
+            {isLogin ? "Enter your credentials." : "Register a new account"}
           </p>
         </div>
 
@@ -241,7 +244,7 @@ export default function AuthForm({ onLoginSuccess }) {
 
             {!isLogin && (
               <>
-                <div className="form-row">
+                {/* <div className="form-row"> */}
                   <div className="form-group">
                     <label htmlFor="firstName">First Name</label>
                     <input
@@ -273,7 +276,7 @@ export default function AuthForm({ onLoginSuccess }) {
                       <span className="error-text">{errors.lastName}</span>
                     )}
                   </div>
-                </div>
+                {/* </div> */}
 
                 <div className="form-group">
                   <label htmlFor="username">Username</label>
@@ -289,6 +292,27 @@ export default function AuthForm({ onLoginSuccess }) {
                   {errors.username && (
                     <span className="error-text">{errors.username}</span>
                   )}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="privacy">Privacy</label>
+                  <select
+                    id="privacy"
+                    name="privacy"
+                    required
+                    value={formData.privacy}
+                    onChange={handleChange}
+                    className="privacy-select"
+                  >
+                    <option value="">
+                      Select Privacy
+                    </option>
+                    <option value="public">
+                      Public
+                    </option>
+                    <option value="private">
+                      Private
+                    </option>
+                  </select>
                 </div>
 
                 <div className="form-group">

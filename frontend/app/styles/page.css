@@ -9,6 +9,53 @@ body {
     min-height: 100vh;
     background-color: #F1F4FD;
   }
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #F1F4FD;
+  }
+  
+  .loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 4px solid #3555F9;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+  
+  .loading-text {
+    color: #64748B;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  
+  .loading-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+  }
+  
+  .loading-tab .loading-spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #3555F9;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
   
   .main-content {
     width: 100%;
@@ -63,4 +110,60 @@ body {
   
   .toggle-btn:hover {
     text-decoration: underline;
+  }
+
+  .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #F1F4FD;
+    padding: 0 24px;
+    text-align: center;
+  }
+  
+  .error-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: #FEE2E2;
+    color: #EF4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  
+  .error-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0 0 12px;
+  }
+  
+  .error-message {
+    font-size: 16px;
+    color: #64748B;
+    margin: 0 0 24px;
+    max-width: 500px;
+  }
+  
+  .retry-button {
+    background-color: #3555F9;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: rgba(6, 6, 236, 0.3) 0px 2px 29px 0px;
+  }
+  
+  .retry-button:hover {
+    background-color: #2440ca;
   }

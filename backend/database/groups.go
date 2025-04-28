@@ -2,6 +2,7 @@ package database
 
 import (
 	structs "social-network/data"
+	"time"
 )
 
 func CreateGroup(admin int64, name, description, image, cover, privacy string) (int64, error) {
@@ -15,35 +16,59 @@ func CreateGroup(admin int64, name, description, image, cover, privacy string) (
 
 func GetGroups(user_id int64) ([]structs.Group, error) {
 	var groups []structs.Group
-	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.members FROM groups g JOIN group_members m ON g.id = m.group_id WHERE m.user_id = ?", user_id)
+	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.cover, g.created_at, g.admin, u.username, g.members FROM groups g JOIN users u ON u.id = g.admin JOIN group_members m ON g.id = m.group_id WHERE m.user_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var group structs.Group
-		err = rows.Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.Admin, &group.TotalMembers)
+		var date time.Time
+		err = rows.Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &date, &group.AdminID, &group.Admin, &group.TotalMembers)
 		if err != nil {
 			return nil, err
 		}
+		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
 	}
 	return groups, nil
 }
 
-func GetOtherGroups(user_id int64) ([]structs.Group, error) {
+func GetSuggestedGroups(user_id int64) ([]structs.Group, error) {
 	var groups []structs.Group
-	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.members FROM groups g WHERE g.id NOT IN (SELECT group_id FROM group_members WHERE user_id = ?)", user_id)
+	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.created_at, u.username, g.members FROM groups g JOIN users u ON u.id = g.admin WHERE g.id NOT IN (SELECT group_id FROM group_members WHERE user_id = ? UNION SELECT group_id FROM invitations_groups WHERE invited_id = ? )", user_id, user_id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var group structs.Group
-		err = rows.Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.Admin, &group.TotalMembers)
+		var date time.Time
+		err = rows.Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.AdminID, &date, &group.Admin, &group.TotalMembers)
 		if err != nil {
 			return nil, err
 		}
+		group.CreatedAt = date.Format("2006-01-02 15:04:05")
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
+func GetPendingGroups(user_id int64) ([]structs.Group, error) {
+	var groups []structs.Group
+	rows, err := DB.Query("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.created_at, u.username, g.members FROM groups g JOIN users u ON u.id = g.admin JOIN invitations_groups i ON g.id = i.group_id WHERE i.invited_id = ?", user_id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var group structs.Group
+		var date time.Time
+		err = rows.Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.AdminID, &date, &group.Admin, &group.TotalMembers)
+		if err != nil {
+			return nil, err
+		}
+		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
 	}
 	return groups, nil
@@ -51,7 +76,9 @@ func GetOtherGroups(user_id int64) ([]structs.Group, error) {
 
 func GetGroupById(group_id int64) (structs.Group, error) {
 	var group structs.Group
-	err := DB.QueryRow("SELECT id, name, description, image, cover, admin, privacy FROM groups WHERE id = ?", group_id).Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.Admin, &group.Privacy)
+	var date time.Time
+	err := DB.QueryRow("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.created_at, u.username, g.members, g.privacy FROM groups g JOIN users u ON u.id = g.admin WHERE g.id = ?", group_id).Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.AdminID, &date, &group.Admin, &group.TotalMembers, &group.Privacy)
+	group.CreatedAt = date.Format("2006-01-02 15:04:05")
 	return group, err
 }
 

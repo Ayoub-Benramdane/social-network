@@ -38,7 +38,10 @@ export default function LeftSidebar({ users, bestcategories }) {
 
         <ul className="user-list">
           {users.map((user) => (
-            <UserCard key={user.id} user={user} action={"follow"} />
+            // <a key={user.id} href={`/profile/${user.id}`} className="user-link">
+              <UserCard key={user.id} user={user} action={"follow"} />
+            // </a>
+
             // <li key={user.id} className="user-item">
             //   <img
             //     src={

@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"social-network/database"
 	"strings"
 	"time"
 	"unicode"
+
+	structs "social-network/data"
+	"social-network/database"
 
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -24,11 +26,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var login struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
+	var login structs.User
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
@@ -117,17 +115,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var register struct {
-		Username          string    `json:"username"`
-		FirstName         string    `json:"firstName"`
-		LastName          string    `json:"lastName"`
-		Email             string    `json:"email"`
-		DateOfBirth       time.Time `json:"dateOfBirth"`
-		Password          string    `json:"password"`
-		ConfirmedPassword string    `json:"confirmedPassword"`
-		AboutMe           string    `json:"aboutMe"`
-		Privacy           string    `json:"privacy"`
-	}
+	var register structs.User
 
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
@@ -140,8 +128,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	register.LastName = r.FormValue("lastName")
 	register.Email = r.FormValue("email")
 	register.Password = r.FormValue("password")
-	register.ConfirmedPassword = r.FormValue("confirmedPassword")
-	register.AboutMe = r.FormValue("aboutMe")
+	register.ConfirmPass = r.FormValue("confirmedPassword")
+	register.Bio = r.FormValue("aboutMe")
 	register.Privacy = r.FormValue("privacy")
 
 	temp := r.FormValue("dateOfBirth")
@@ -155,7 +143,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmedPassword, register.Privacy, register.AboutMe, register.DateOfBirth)
+	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmPass, register.Privacy, register.Bio, register.DateOfBirth)
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -213,6 +201,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	var coverPath string
 	cover, header, err := r.FormFile("cover")
+	fmt.Println(cover)
 	if err != nil && err.Error() != "http: no such file" {
 		fmt.Println("3")
 		fmt.Println(err)
@@ -236,7 +225,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		coverPath = "/inconnu/cover.jpg"
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.AboutMe, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)

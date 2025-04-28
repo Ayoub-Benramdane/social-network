@@ -67,7 +67,7 @@
   }
   
   .form-row {
-    display: flex;
+    /* display: flex; */
     gap: 16px;
   }
   
@@ -280,3 +280,27 @@
       font-size: 0.875rem;
     }
   }
+
+  .privacy-select {
+    padding: 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #F8FAFC;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    background-size: 16px 16px;
+  }
+  
+  .privacy-select:focus {
+    border-color: #3555F9;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(53, 85, 249, 0.1);
+    background-color: white;
+  }
+  
+  .privacy-select.error {
+    border-color: #EF4444;
+    background-color: #FEF2F2;
+  }
+  

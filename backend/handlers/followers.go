@@ -26,7 +26,8 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user_id int64
-	err = json.NewDecoder(r.Body).Decode(&user_id)
+	user_id, err = strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
+	// err = json.NewDecoder(r.Body).Decode(&user_id)
 	if err != nil {
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -52,7 +53,7 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !isFollowed {
 		if userToFollowing.Privacy == "public" {
-			if err := database.AddFollower(user.ID, user_id); err != nil {
+			if database.AddFollower(user.ID, user_id) != nil {
 				response := map[string]string{"error": "Failed to follow user"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)
@@ -63,7 +64,7 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(response)
 		} else {
-			if err := database.CreateInvitation(user.ID, user_id); err != nil {
+			if database.CreateInvitation(user.ID, user_id) != nil {
 				response := map[string]string{"error": "Failed to follow user"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)
@@ -76,7 +77,7 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	fmt.Println("54")
 	invitation, err := database.CheckInvitation(user.ID, user_id)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve invitation"}
@@ -87,13 +88,13 @@ func FollowHandler(w http.ResponseWriter, r *http.Request) {
 
 	if invitation {
 		if err := database.DeleteInvitation(user.ID, user_id); err != nil {
-			response := map[string]string{"error": "Failed to unfollow user"}
+			response := map[string]string{"error": "Failed to delete invitation"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
 			return
 		}
 
-		response := map[string]string{"message": "User unfollowed successfully"}
+		response := map[string]string{"message": "User deleted invitation"}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -145,7 +146,6 @@ func FollowersHandler(w http.ResponseWriter, r *http.Request) {
 
 	followed, err := database.IsFollowed(user.ID, user_id)
 	if err != nil {
-		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve followings"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -201,7 +201,6 @@ func FollowingHandler(w http.ResponseWriter, r *http.Request) {
 
 	followed, err := database.IsFollowed(user.ID, user_id)
 	if err != nil {
-		fmt.Println(err)
 		response := map[string]string{"error": "Failed to retrieve followings"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)

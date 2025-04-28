@@ -1,10 +1,27 @@
 export default function UserCard({ user, action, onClick }) {
-  const handleFollow = (id) => {
-    console.log("Followed user with ID:", id);
-  };
+  async function handleFollow(id) {
+    try {
+      const response = await fetch(`http://localhost:8404/follow?id=${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        console.log("Followed successfully");
+      }
+    } catch (error) {
+      console.error("Error following user:", error);
+    }
+  }
 
   return (
-    <li className="user-item" onClick={onClick}>
+    <li
+      className="user-item"
+      // onClick={}
+    >
       <img
         src={user.avatar || user.image}
         className="user-avatar"
@@ -12,11 +29,14 @@ export default function UserCard({ user, action, onClick }) {
       />
       <div className="user-details">
         <div className="user-info">
-          <h4 className="user-name">
-            {user.first_name
-              ? `${user.first_name} ${user.last_name}`
-              : user.name}
-          </h4>
+          <a key={user.id} href={`/profile/${user.id}`} className="user-link">
+            <h4 className="user-name">
+              {user.first_name
+                ? `${user.first_name} ${user.last_name}`
+                : user.name}
+            </h4>
+          </a>
+          {/* <h4 className="user-name">{`${user.first_name} ${user.last_name}`}</h4> */}
           <p className="user-username">
             {user.username
               ? `@${user.username}`

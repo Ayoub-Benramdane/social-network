@@ -1,14 +1,15 @@
 package database
 
-import structs "social-network/data"
+import (
+	"fmt"
+	structs "social-network/data"
+)
 
 func AddFollower(follower_id, following_id int64) error {
 	_, err := DB.Exec("INSERT INTO follows (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)
 	if err == nil {
 		if err = CreateNotification(follower_id, 0, following_id, "follow"); err != nil {
-			return err
-		}
-		if err = DeleteInvitation(follower_id, following_id); err != nil {
+			fmt.Println(err, "Error creating notification")
 			return err
 		}
 	}
@@ -27,7 +28,7 @@ func RemoveFollower(follower_id, following_id int64) error {
 }
 
 func GetFollowers(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = ?", user_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +36,7 @@ func GetFollowers(user_id int64) ([]structs.User, error) {
 	var followers []structs.User
 	for rows.Next() {
 		var follower structs.User
-		err = rows.Scan(&follower.ID, &follower.Username)
+		err = rows.Scan(&follower.ID, &follower.Username, &follower.Avatar)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +64,7 @@ func GetFollowing(user_id int64) ([]structs.User, error) {
 }
 
 func GetNotFollowing(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT id, username, avatar, lastname, firstname FROM users WHERE id NOT IN (SELECT following_id FROM follows WHERE follower_id = ?) AND id != ?", user_id, user_id)
+	rows, err := DB.Query("SELECT id, username, avatar, lastname, firstname FROM users WHERE id NOT IN (SELECT following_id FROM follows WHERE follower_id = ?) AND id NOT IN (SELECT recipient_id FROM invitations WHERE invited_id = ?) AND id != ?", user_id, user_id, user_id)
 	if err != nil {
 		return nil, err
 	}

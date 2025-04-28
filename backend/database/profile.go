@@ -6,7 +6,7 @@ import (
 
 func GetProfileInfo(user_id int64) (structs.User, error) {
 	var user structs.User
-	err := DB.QueryRow("SELECT id, username, firstname, lastname, email, avatar,cover, about, privacy, date_of_birth, created_at, followers, following FROM users WHERE id = ?", user_id).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Email, &user.Avatar, &user.Cover, &user.Bio, &user.Privacy, &user.DateOfBirth, &user.CreatedAt, &user.TotalFollowers, &user.TotalFollowing)
+	err := DB.QueryRow("SELECT id, username, firstname, lastname, email, avatar, cover, about, privacy, date_of_birth, created_at, followers, following FROM users WHERE id = ?", user_id).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Email, &user.Avatar, &user.Cover, &user.Bio, &user.Privacy, &user.DateOfBirth, &user.CreatedAt, &user.TotalFollowers, &user.TotalFollowing)
 	if err != nil {
 		return structs.User{}, err
 	}

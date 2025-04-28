@@ -62,6 +62,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if user_id == user.ID {
+		info.Role = "owner"
+	}
+
 	data := struct {
 		ProfileInfo structs.User
 		Posts       []structs.Post

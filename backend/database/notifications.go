@@ -7,16 +7,10 @@ import (
 func CreateNotification(user_id, post_id, notified_id int64, type_notification string) error {
 	if post_id != 0 {
 		_, err := DB.Exec("INSERT INTO notifications (user_id, notified_id, type_notification, post_id) VALUES (?, ?, ?, ?)", user_id, notified_id, type_notification, post_id)
-		if err != nil {
-			return err
-		}
-	} else {
-		_, err := DB.Exec("INSERT INTO notifications (user_id, notified_id, type_notification) VALUES (?, ?, ?)", user_id, notified_id, type_notification)
-		if err != nil {
-			return err
-		}
+		return err
 	}
-	return nil
+	_, err := DB.Exec("INSERT INTO notifications (user_id, notified_id, type_notification) VALUES (?, ?, ?)", user_id, notified_id, type_notification)
+	return err
 }
 
 func GetNotifications(notified_id int64) ([]structs.Notification, error) {
@@ -38,7 +32,11 @@ func GetNotifications(notified_id int64) ([]structs.Notification, error) {
 }
 
 func DeleteNotification(user_id, post_id, post_user_id int64, type_notification string) error {
-	_, err := DB.Exec("DELETE FROM notifications WHERE user_id = ? AND post_id = ? AND notified_id = ? AND type_notification = ?", user_id, post_id, post_user_id, type_notification)
+	if post_id != 0 {
+		_, err := DB.Exec("DELETE FROM notifications WHERE user_id = ? AND post_id = ? AND type_notification = ?", user_id, post_id, type_notification)
+		return err
+	}
+	_, err := DB.Exec("DELETE FROM notifications WHERE user_id = ? AND type_notification = ?", user_id, type_notification)
 	return err
 }
 

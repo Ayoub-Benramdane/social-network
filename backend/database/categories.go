@@ -74,3 +74,12 @@ func GetBestCategories() ([]structs.Category, error) {
 	}
 	return categories, nil
 }
+
+func GetCategoryById(id int64) (*structs.Category, error) {
+	var category structs.Category
+	err := DB.QueryRow("SELECT id, name, color, background FROM categories WHERE id = ?", id).Scan(&category.ID, &category.Name, &category.Color, &category.Background)
+	if err != nil {
+		return nil, err
+	}
+	return &category, nil
+}

@@ -36,7 +36,7 @@ func GetEvents(user_id int64) ([]structs.Event, error) {
 	for rows.Next() {
 		var event structs.Event
 		var date time.Time
-		err = rows.Scan(&event.ID, &event.Creator, &event.GroupName, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, date)
+		err = rows.Scan(&event.ID, &event.Creator, &event.GroupName, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, &date)
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func GetEvents(user_id int64) ([]structs.Event, error) {
 func GetEvent(id int64) (structs.Event, error) {
 	var event structs.Event
 	var date time.Time
-	err := DB.QueryRow("SELECT u.username, g.name, e.name, e.description, e.start_date, e.end_date, e.location, e.created_at FROM group_events e JOIN users u ON u.id = e.created_by JOIN groups g ON g.id = e.group_id WHERE e.id = ?", id).Scan(&event.Creator, &event.Group, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, date)
+	err := DB.QueryRow("SELECT u.username, g.name, e.name, e.description, e.start_date, e.end_date, e.location, e.created_at FROM group_events e JOIN users u ON u.id = e.created_by JOIN groups g ON g.id = e.group_id WHERE e.id = ?", id).Scan(&event.Creator, &event.Group, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, &date)
 	event.CreatedAt = TimeAgo(date)
 	return event, err
 }
@@ -64,7 +64,7 @@ func GetEventGroup(group_id int64) ([]structs.Event, error) {
 	for rows.Next() {
 		var event structs.Event
 		var date time.Time
-		err = rows.Scan(&event.ID, &event.Creator, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, date)
+		err = rows.Scan(&event.ID, &event.Creator, &event.Name, &event.Description, &event.StartDate, &event.EndDate, &event.Location, &date)
 		if err != nil {
 			return nil, err
 		}

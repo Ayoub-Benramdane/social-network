@@ -48,7 +48,7 @@ func GetPosts(user_id int64, followers []structs.User) ([]structs.Post, error) {
 	}
 
 	query := fmt.Sprintf(`
-	SELECT DISTINCT posts.id, posts.title, posts.content, categories.name, categories.color, categories.background, users.username,
+	SELECT DISTINCT posts.id, posts.title, posts.content, categories.name, categories.color, categories.background, users.id, users.username, users.Avatar,
 	       posts.created_at, posts.total_likes, posts.total_comments, posts.privacy, posts.image
 	FROM posts
 	JOIN categories ON categories.id = posts.category_id
@@ -69,7 +69,7 @@ func GetPosts(user_id int64, followers []structs.User) ([]structs.Post, error) {
 	for rows.Next() {
 		var post structs.Post
 		var date time.Time
-		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.Author, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
+		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
 		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
 			fmt.Println(err)
 			return nil, err
@@ -161,20 +161,47 @@ func GetPostsGroup(group_id, user_id int64, privacy string) ([]structs.Post, err
 	return posts, nil
 }
 
+func GetPostsByCategory(category_id, user_id int64) ([]structs.Post, error) {
+	var posts []structs.Post
+	rows, err := DB.Query("SELECT p.id, p.title, p.content, categories.name, categories.color, categories.background, users.username, users.avatar, p.created_at, p.total_likes, p.total_comments, p.image FROM posts p JOIN categories ON categories.id = p.category_id JOIN users ON p.user_id = users.id WHERE p.category_id = ?", category_id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var post structs.Post
+		var date time.Time
+		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Image)
+		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
+			return nil, err
+		}
+		post.CreatedAt = TimeAgo(date)
+		post.IsLiked, err = PostIsLiked(post.ID, user_id)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
 func GetPost(user_id, post_id, group_id int64) (structs.Post, error) {
 	var post structs.Post
+	var date time.Time
 	if group_id == 0 {
-		err := DB.QueryRow("SELECT posts.id, posts.title, posts.content, categories.name, categories.color, categories.background, users.username, posts.created_at, posts.total_likes, posts.total_comments FROM posts JOIN users ON posts.user_id = users.id JOIN categories ON categories.id = posts.category_id WHERE posts.id = ?", post_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.Author, &post.CreatedAt, &post.TotalLikes, &post.TotalComments)
-		if err != nil {
+		err := DB.QueryRow("SELECT posts.id, posts.title, posts.content, categories.name, categories.color, categories.background, users.id, users.username, users.avatar, posts.created_at, posts.total_likes, posts.total_comments, posts.privacy, posts.image FROM posts JOIN users ON posts.user_id = users.id JOIN categories ON categories.id = posts.category_id WHERE posts.id = ?", post_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
+		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
 			return structs.Post{}, err
 		}
+		post.CreatedAt = TimeAgo(date)
 		post.IsLiked, err = PostIsLiked(post.ID, user_id)
 		return post, err
 	}
-	err := DB.QueryRow("SELECT p.id, p.title, p.content, categories.name, categories.color, categories.background, p.image, users.username, p.created_at, p.total_likes, p.total_comments FROM group_posts p JOIN categories ON categories.id = p.category_id JOIN users ON p.user_id = users.id WHERE p.id = ? AND p.group_id = ?", post_id, group_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.Image, &post.Author, &post.CreatedAt, &post.TotalLikes, &post.TotalComments)
-	if err != nil {
+	err := DB.QueryRow("SELECT p.id, p.title, p.content, categories.name, categories.color, categories.background, users.id, users.username, users.avatar, p.created_at, p.total_likes, p.total_comments, p.image FROM group_posts p JOIN categories ON categories.id = p.category_id JOIN users ON p.user_id = users.id WHERE p.id = ? AND p.group_id = ?", post_id, group_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Image)
+	if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
 		return structs.Post{}, err
 	}
+	post.CreatedAt = TimeAgo(date)
 	post.IsLiked, err = PostGroupIsLiked(post.ID, group_id, user_id)
 	return post, err
 }

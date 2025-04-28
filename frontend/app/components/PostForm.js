@@ -14,7 +14,6 @@ export default function PostForm() {
   });
   const [imageInputKey, setImageInputKey] = useState(Date.now());
 
-  // Fetch followers when modal opens and privacy is set to almost-private
   useEffect(() => {
     if (showModal && postFormInput.privacy === "almost-private") {
       fetchFollowers();

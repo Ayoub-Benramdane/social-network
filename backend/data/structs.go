@@ -18,12 +18,13 @@ type User struct {
 	LastName           string    `json:"last_name" sqlite:"last_name"`
 	Email              string    `json:"email" sqlite:"email"`
 	DateOfBirth        time.Time `json:"date_of_birth" sqlite:"date_of_birth"`
-	Password           []byte    `json:"password" sqlite:"password"`
-	ConfirmPass        []byte    `json:"confirm_pass" sqlite:"confirm_pass"`
+	Password           string    `json:"password" sqlite:"password"`
+	ConfirmPass        string    `json:"confirm_pass" sqlite:"confirm_pass"`
 	CreatedAt          time.Time `json:"created_at" sqlite:"created_at"`
 	Avatar             string    `json:"avatar" sqlite:"avatar"`
 	Cover              string    `json:"cover" sqlite:"cover"`
 	Bio                string    `json:"bio" sqlite:"bio"`
+	Role               string    `json:"role" sqlite:"role"`
 	Privacy            string    `json:"privacy" sqlite:"privacy"`
 	TotalPosts         int64     `json:"total_posts" sqlite:"total_posts"`
 	TotalLikes         int64     `json:"total_likes" sqlite:"total_likes"`
@@ -72,22 +73,24 @@ type Comment struct {
 }
 
 type Category struct {
-	ID    int64  `json:"id" sqlite:"id"`
-	Name  string `json:"name" sqlite:"name"`
-	Count int64  `json:"count" sqlite:"count"`
+	ID         int64  `json:"id" sqlite:"id"`
+	Name       string `json:"name" sqlite:"name"`
+	Color      string `json:"color" sqlite:"color"`
+	Background string `json:"background" sqlite:"background"`
+	Count      int64  `json:"count" sqlite:"count"`
 }
 
 type Group struct {
-	ID           int64     `json:"id" sqlite:"id"`
-	Name         string    `json:"name" sqlite:"name"`
-	Image        string    `json:"image" sqlite:"image"`
-	Cover        string    `json:"cover" sqlite:"cover"`
-	Description  string    `json:"description" sqlite:"description"`
-	CreatedAt    time.Time `json:"created_at" sqlite:"created_at"`
-	Admin        string    `json:"admin" sqlite:"admin"`
-	Privacy      string    `json:"privacy" sqlite:"privacy"`
-	Members      []User    `json:"members" sqlite:"members"`
-	TotalMembers int64     `json:"total_members" sqlite:"total_members"`
+	ID           int64  `json:"id" sqlite:"id"`
+	Name         string `json:"name" sqlite:"name"`
+	Image        string `json:"image" sqlite:"image"`
+	Cover        string `json:"cover" sqlite:"cover"`
+	Description  string `json:"description" sqlite:"description"`
+	CreatedAt    string `json:"created_at" sqlite:"created_at"`
+	Admin        string `json:"admin" sqlite:"admin"`
+	AdminID      int64  `json:"admin_id" sqlite:"admin_id"`
+	Privacy      string `json:"privacy" sqlite:"privacy"`
+	TotalMembers int64  `json:"total_members" sqlite:"total_members"`
 }
 
 type Message struct {
@@ -114,7 +117,7 @@ type Notification struct {
 
 type Invitation struct {
 	ID       int64  `json:"id" sqlite:"id"`
-	SenderID int64  `json:"sender_id" sqlite:"sender_id"`
+	SenderID int64  `json:"sender_id" sqlite:"invited_id"`
 	GroupID  int64  `json:"group_id" sqlite:"group_id"`
 	Sender   string `json:"sender" sqlite:"sender"`
 	Avatar   string `json:"avatar" sqlite:"avatar"`
@@ -134,5 +137,4 @@ type Event struct {
 	EndDate     time.Time `json:"end_date" sqlite:"end_date"`
 	CreatedAt   string    `json:"created_at" sqlite:"created_at"`
 	Creator     string    `json:"creator" sqlite:"creator"`
-	Attendees   []User    `json:"attendees" sqlite:"attendees"`
 }

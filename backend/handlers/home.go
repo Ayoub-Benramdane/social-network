@@ -79,36 +79,10 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	suggested_groups, err := database.GetOtherGroups(user.ID)
+	suggested_groups, err := database.GetSuggestedGroups(user.ID)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err, "ddl;k")
 		response := map[string]string{"error": "Failed to retrieve groups"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	invitations_friends, err := database.GetInvitationsFriends(user.ID)
-	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve invitations"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	invitations_groups, err := database.GetInvitationsGroups(user.ID)
-	if err != nil {
-		fmt.Println(err)
-		response := map[string]string{"error": "Failed to retrieve invitations"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	Events, err := database.GetEvents(user.ID)
-	if err != nil {
-		fmt.Println(err)
-		response := map[string]string{"error": "Failed to retrieve events"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -124,27 +98,21 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var home = struct {
-		User               structs.User         `json:"user"`
-		Posts              []structs.Post       `json:"posts"`
-		BestCategories     []structs.Category   `json:"best_categories"`
-		MyGroups           []structs.Group      `json:"my_groups"`
-		SuggestedGroups    []structs.Group      `json:"suggested_groups"`
-		SuggestedUsers     []structs.User       `json:"suggested_users"`
-		InvitationsFriends []structs.Invitation `json:"invitations_friends"`
-		InvitationsGroups  []structs.Invitation `json:"invitations_groups"`
-		Events             []structs.Event      `json:"events"`
-		Connections        []structs.User       `json:"connections"`
+		User           structs.User       `json:"user"`
+		Posts          []structs.Post     `json:"posts"`
+		BestCategories []structs.Category `json:"best_categories"`
+		MyGroups       []structs.Group    `json:"my_groups"`
+		DiscoverGroups []structs.Group    `json:"discover_groups"`
+		SuggestedUsers []structs.User     `json:"suggested_users"`
+		Connections    []structs.User     `json:"connections"`
 	}{
-		User:               user_info,
-		Posts:              posts,
-		BestCategories:     best_categories,
-		MyGroups:           my_groups,
-		SuggestedGroups:    suggested_groups,
-		SuggestedUsers:     suggested_users,
-		InvitationsFriends: invitations_friends,
-		InvitationsGroups:  invitations_groups,
-		Events:             Events,
-		Connections:        connections,
+		User:           user_info,
+		Posts:          posts,
+		BestCategories: best_categories,
+		MyGroups:       my_groups,
+		DiscoverGroups: suggested_groups,
+		SuggestedUsers: suggested_users,
+		Connections:    connections,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

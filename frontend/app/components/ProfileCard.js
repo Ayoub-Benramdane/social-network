@@ -23,7 +23,9 @@ export default function ProfileCard({ user, onPostCreated }) {
       </div>
 
       <div className="profile-info">
-        <h2 className="profile-name">{`${user.first_name} ${user.last_name}`}</h2>
+        <a href={`/profile/${user.id}`} className="profile-link">
+          <h2 className="profile-name">{`${user.first_name} ${user.last_name}`}</h2>
+        </a>
         <p className="profile-username">@{user.username || "username"}</p>
 
         <div className="stats">

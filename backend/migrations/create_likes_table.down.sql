@@ -1,2 +1,2 @@
 -- +migrate Down
-DROP TABLE IF EXISTS group_post_likes;
+DROP TABLE IF EXISTS post_likes;
