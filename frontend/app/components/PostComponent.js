@@ -50,41 +50,37 @@ export default function PostComponent({ posts: initialPosts }) {
     }
   }
   async function handleSave(postId) {
-    setSavedMessage(`Post ${postId} saved!`);
-    setTimeout(() => {
-      setSavedMessage("");
-    }, 1500);
-    // try {
-    //   const response = await fetch("http://localhost:8404/save", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     credentials: "include",
-    //     body: JSON.stringify(postId),
-    //   });
-    //   if (!response.ok) {
-    //     const data = await response.json();
-    //     console.log(data);
-    //   }
-    //   if (response.ok) {
-    //     const updatedPost = await response.json();
-    //     setPosts((prevPosts) =>
-    //       prevPosts.map((post) =>
-    //         post.id === postId
-    //           ? {
-    //               ...post,
-    //               saved: updatedPost.saved,
-    //             }
-    //           : post
-    //       )
-    //     );
-    //     console.log(updatedPost);
-    //     console.log("Save Post: ", postId);
-    //   }
-    // } catch (error) {
-    //   console.log(error);
-    // }
+    try {
+      const response = await fetch(`http://localhost:8404/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ post_id: postId, group_id: 0 }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        console.log(data);
+      }
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  saved: updatedPost.saved,
+                }
+              : post
+          )
+        );
+        console.log(updatedPost);
+        // console.log("Save Post: ", postId);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async function handleLike(postId) {
@@ -95,7 +91,7 @@ export default function PostComponent({ posts: initialPosts }) {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(postId),
+        body: JSON.stringify({ post_id: postId, group_id: 0 }),
       });
 
       if (!response.ok) {
@@ -293,8 +289,7 @@ export default function PostComponent({ posts: initialPosts }) {
               Comment
             </button>
           </div>
-          <a key={post.id} href={`/post/${post.id}`} className="post-link">
-
+          <a key={post.id} href={`/post/${post.id}/0`} className="post-link">
             <button
               className="see-post-button"
 

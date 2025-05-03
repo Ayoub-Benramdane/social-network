@@ -64,6 +64,8 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	if user_id == user.ID {
 		info.Role = "owner"
+	} else {
+		info.Role = "user"
 	}
 
 	data := struct {

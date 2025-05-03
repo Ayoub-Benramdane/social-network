@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+// import { useRouter } from "next/navigation";
+
 import Navbar from "../components/NavBar";
 import "../../styles/GroupsPage.css";
 import EventCard from "../components/EventCard";
@@ -7,10 +9,17 @@ import MemberCard from "../components/MemberCard";
 import GroupCard from "../components/GroupCard";
 import PostCard from "../components/PostCard";
 import InvitationCard from "../components/InvitationCard";
+import PostFormModal from "../components/PostFormModal";
+import PostsComponent from "../components/PostsComponent";
 
 function handleEventSelect(event) {
   console.log("Interested: ", event);
 }
+// const router = useRouter();
+
+// const goToHome = () => {
+//   router.push("/");
+// };
 
 //   return (
 //     <div className="event-card">
@@ -116,13 +125,9 @@ const Message = ({ message, isSent }) => {
 };
 
 export default function GroupsPage() {
-  const tempEvent = {
-    month: "May",
-    day: "12",
-    title: "Hackathon",
-    location: "Oujda",
-    time: "2:00 PM - 5:00 PM",
-  };
+  function handleCreatePost() {
+    setShowPostForm(true);
+  }
 
   const [activeTab, setActiveTab] = useState("discover");
   const [groupData, setGroupData] = useState([]);
@@ -156,10 +161,15 @@ export default function GroupsPage() {
   const [eventImage, setEventImage] = useState(null);
   const [eventTitle, setEventTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [groups, setGroups] = useState([]);
 
   // const [showPostForm, setShowPostForm] = useState(false);
   // const [showEventForm, setShowEventForm] = useState(false)
 
+  const addNewPost = (newPost) => {
+    setPosts((prevPosts) => [newPost, ...prevPosts]);
+  };
   const messagesEndRef = useRef(null);
   async function fetchGroupData(endpoint) {
     try {
@@ -189,7 +199,7 @@ export default function GroupsPage() {
     } else if (tab === "my-groups") {
       fetchGroupData("my_groups");
     } else if (tab === "pending-groups") {
-      fetchGroupData("pinding_groups");
+      fetchGroupData("pending_groups");
     } else if (tab === "invitations") {
       fetchGroupData("invitations_groups");
     }
@@ -312,7 +322,8 @@ export default function GroupsPage() {
       }
 
       const data = await response.json();
-      console.log("Groupd: ", data);
+      console.log("Group data:", data);
+
       const selected = {
         ...data.Group,
         id: data.Group.id,
@@ -328,6 +339,9 @@ export default function GroupsPage() {
       };
 
       setSelectedGroup(selected);
+      // console.log("Selected Group: ", selected);
+      // console.log("Selected Group ID: ", selected.id);
+
       // setShowPostForm(false);
       // setShowEventForm(false);
 
@@ -341,7 +355,7 @@ export default function GroupsPage() {
   }, []);
 
   const handlePostSubmit = async (groupId) => {
-    console.log("selectedGroup.id:", groupId);
+    console.log(groupId);
 
     if (!groupId || isNaN(Number(groupId))) {
       alert("Group ID is missing or invalid.");
@@ -378,6 +392,7 @@ export default function GroupsPage() {
         alert(data.error || "Failed to create post.");
         return;
       }
+      console.log("Post created:", data);
 
       // setSelectedGroup((prev) => ({
       //   ...prev,
@@ -477,8 +492,18 @@ export default function GroupsPage() {
     const date = new Date(createdAt);
     return date.toLocaleString();
   }
+  const currentUser = {
+    first_name: "Mohammed Amine",
+    last_name: "Dinani",
+    avatar: "./avatars/thorfinn-vinland-saga-episode-23-1.png",
+    username: "mdinani",
+  };
   return (
     <div className="groups-page-container">
+       <Navbar user={currentUser} />
+      {/* <button onClick={goToHome} className="retry-button">
+        Go to Home
+      </button> */}
       <div className="groups-page-content">
         {!selectedGroup ? (
           <div>
@@ -647,12 +672,14 @@ export default function GroupsPage() {
                   {activeTab === "discover" ? (
                     <>
                       <p>No groups available for discovery.</p>
+                      {(activeTab === "my-groups" || activeTab === "invitations") && (
                       <button
                         className="create-group-btn"
                         onClick={() => setShowForm(true)}
                       >
                         Create a Group
                       </button>
+                      )}
                     </>
                   ) : (
                     <p>No pending group requests.</p>
@@ -701,16 +728,15 @@ export default function GroupsPage() {
                   </div>
                 </div>
               </div>
-
+              {(activeTab === "discover" || activeTab === "pending-groups") && (
               <button
-                className={`group-action-btn ${
-                  selectedGroup.joined ? "joined" : ""
-                }`}
+               className={`group-action-btn ${selectedGroup.joined ? "joined" : ""}`}
               >
-                {selectedGroup.joined ? "Joined" : "Join Group"}
-              </button>
-            </div>
+              {selectedGroup.joined ? "Joined" : "Join Group"}
+            </button>
+             )}
 
+            </div>
             <div className="group-detail-tabs">
               <button
                 className={`tab-button ${
@@ -745,11 +771,35 @@ export default function GroupsPage() {
                 Chat
               </button>
             </div>
-
+            <div className="profile-actions">
+  {activeTab === "my-groups" || activeTab === "invitations" ? (
+    <button
+      onClick={handleCreatePost}
+      className="action-btn primary-button"
+    >
+      <img src="/icons/create.svg" alt="" />
+      <span>Create post</span>
+    </button>
+  ) : null}
+</div>
             <div className="group-detail-content">
               {groupView === "posts" && (
                 <div className="group-posts-container">
-                  <div style={{ marginTop: 20 }}>
+                  {selectedGroup.posts.length > 0 ? (
+                    selectedGroup.posts.map((post) => (
+                      <PostsComponent
+                        post={post}
+                        key={post.id}
+                        groupId={selectedGroup.id}
+                      />
+                    ))
+                  ) : (
+                    <div>
+                      <h3>No posts available</h3>
+                    </div>
+                  )}
+
+                  {/* <div style={{ marginTop: 20 }}>
                     <button onClick={() => setSelectedGroup(null)}>
                       ← Back to All Groups
                     </button>
@@ -764,9 +814,9 @@ export default function GroupsPage() {
                     />
                     <p>{selectedGroup.description}</p>
                     <small>Privacy: {selectedGroup.privacy}</small>
-                  </div>
+                  </div> */}
 
-                  <div style={{ marginTop: 20 }}>
+                  {/* <div style={{ marginTop: 20 }}>
                     <button
                       onClick={() => {
                         setShowPostForm(true);
@@ -776,17 +826,9 @@ export default function GroupsPage() {
                       ➕ Create Post
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setShowEventForm(true);
-                        setShowPostForm(false);
-                      }}
-                    >
-                      📅 Create Event
-                    </button>
-                  </div>
+                  </div> */}
 
-                  {showPostForm && (
+                  {/* {showPostForm && (
                     <div style={{ marginTop: 20 }}>
                       <h4>Create a Post</h4>
 
@@ -910,9 +952,16 @@ export default function GroupsPage() {
                           </div>
                         )}
                     </div>
+                  )} */}
+                  {showPostForm && (
+                    <PostFormModal
+                      onClose={() => setShowPostForm(false)}
+                      // user={user}
+                      onPostCreated={addNewPost}
+                      group_id={selectedGroup.id}
+                    />
                   )}
-
-                  {showEventForm && (
+                  {/* {showEventForm && (
                     <div style={{ marginTop: 20 }}>
                       <h4>Create an Event</h4>
                       <input
@@ -966,43 +1015,42 @@ export default function GroupsPage() {
                         Create Event
                       </button>
 
-                      {selectedGroup?.events &&
-                        (
-                          <div
+                      {selectedGroup?.events && (
+                        <div
+                          style={{
+                            marginTop: 40,
+                            padding: "10px",
+                            background: "#f0f4f8",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          <h3
                             style={{
-                              marginTop: 40,
-                              padding: "10px",
-                              background: "#f0f4f8",
-                              borderRadius: "8px",
+                              borderBottom: "2px solid #ccc",
+                              paddingBottom: "5px",
                             }}
                           >
-                            <h3
+                            📅 Upcominggg Events
+                          </h3>
+
+                          {selectedGroup.events.map((event) => (
+                            <div
+                              key={event.id}
                               style={{
-                                borderBottom: "2px solid #ccc",
-                                paddingBottom: "5px",
+                                background: "#fff",
+                                border: "1px solid #ddd",
+                                padding: 15,
+                                marginBottom: 15,
+                                borderRadius: "6px",
                               }}
                             >
-                              📅 Upcominggg Events
-                            </h3>
-
-                            {selectedGroup.events.map((event) => (
-                              <div
-                                key={event.id}
-                                style={{
-                                  background: "#fff",
-                                  border: "1px solid #ddd",
-                                  padding: 15,
-                                  marginBottom: 15,
-                                  borderRadius: "6px",
-                                }}
-                              >
-                                <EventCard key={event.id} event={tempEvent} />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                              <EventCard key={event.id} event={tempEvent} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  )} */}
 
                   {selectedGroup.posts && selectedGroup.posts.length > 0 && (
                     <div></div>
@@ -1012,7 +1060,7 @@ export default function GroupsPage() {
               {groupView === "members" && (
                 <div className="group-members-container">
                   <div className="members-header">
-                    <h3>Members ({groupMembers.length})</h3>
+                    <h3>Members ({selectedGroup.members.length})</h3>
                     <div className="members-search">
                       <input
                         type="text"
@@ -1023,7 +1071,7 @@ export default function GroupsPage() {
                   </div>
 
                   <div className="members-grid">
-                    {groupMembers.map((member) => (
+                    {selectedGroup.members.map((member) => (
                       <MemberCard key={member.id} member={member} />
                     ))}
                   </div>
@@ -1034,6 +1082,7 @@ export default function GroupsPage() {
                 <div className="group-events-container">
                   <div className="events-header">
                     <h3>Upcoming Events</h3>
+                    {(activeTab === "my-groups" || activeTab === "invitations") && (
                     <button
                       className="create-event-btn"
                       onClick={() => setShowEventForm((prev) => !prev)}
@@ -1055,11 +1104,11 @@ export default function GroupsPage() {
                       </svg>
                       {showEventForm ? "Cancel" : "Create Event"}
                     </button>
+                    )}
                   </div>
-
                   <div className="events-list">
                     {selectedGroup.events.map((event) => (
-                      <EventCard key={event.id} event={tempEvent} />
+                      <EventCard key={event.id} event={event} />
                     ))}
                   </div>
                 </div>

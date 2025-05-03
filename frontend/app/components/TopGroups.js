@@ -25,7 +25,7 @@ export default function TopGroups({ groups }) {
         <h3>Suggested Groups</h3>
         <button className="see-all-btn">
           <a href="/groups">
-          See all <span className="arrow">→</span>
+            See all <span className="arrow">→</span>
           </a>
         </button>
       </div>

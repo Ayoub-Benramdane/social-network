@@ -1,16 +1,21 @@
-import "../../styles/GroupsPage.css"
+import "../../styles/GroupsPage.css";
 
 export default function EventCard({ event }) {
+  function handleEventSelect(event) {
+    console.log("Interested: ", event);
+  }
   return (
     <div className="event-card">
       <div className="event-date">
+        <span className="event-day">
+          {new Date(event.day).getDate()}
+          {/* {event.day} */}
+        </span>
         <span className="event-month">
-          {new Date(event.start_date).toLocaleString("default", {
+          {new Date(event.day).toLocaleString("default", {
             month: "short",
           })}
-        </span>
-        <span className="event-day">
-          {new Date(event.start_date).getDate()}
+          {/* {event.month} */}
         </span>
       </div>
       <div className="event-details">
@@ -76,6 +81,7 @@ export default function EventCard({ event }) {
             hour: "2-digit",
             minute: "2-digit",
           })}
+          {/* {event.time} */}
         </p>
         <button className="event-action-btn" onClick={handleEventSelect(event)}>
           Interested

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
@@ -188,6 +189,50 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(event)
+}
+
+func GetEventsHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("aaaaaaaa")
+	if r.Method != http.MethodGet {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	events, err := database.GetEvents(user.ID)
+	if err != nil {
+		fmt.Println("Returning events:", events)
+		response := map[string]string{"error": "Failed to retrieve events"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	for i := range events {
+		member, err := database.IsMemberGroup(user.ID, events[i].GroupID)
+		if err != nil {
+			response := map[string]string{"error": "Failed to check if user is a member"}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		if !member {
+			events = append(events[:i], events[i+1:]...)
+			i--
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(events)
 }
 
 func ValidateEvent(name, description, location string, startDate, endDate time.Time) (map[string]string, bool) {

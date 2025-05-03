@@ -3,6 +3,27 @@
     min-height: 100vh;
     background-color: #F1F4FD;
   }
+  .back-button {
+    display: flex;
+    align-items: center;
+    background-color: #EFF6FF;
+    border: none;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    color: #3555F9;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  
+  .back-button:hover {
+    background-color: #DBEAFE;
+  }
+  
+  .back-arrow {
+    margin-right: 8px;
+  }
   
   .post-page-content {
     width: 100%;

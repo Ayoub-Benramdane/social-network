@@ -115,17 +115,11 @@ func GetInvitationById(invitation_id, group_id int64) (structs.Invitation, error
 func CheckInvitation(invited_id, recipient_id int64) (bool, error) {
 	var count int
 	err := DB.QueryRow("SELECT COUNT(*) FROM invitations WHERE recipient_id = ? AND invited_id = ?", recipient_id, invited_id).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	return count > 0, err
 }
 
 func CheckInvitationGroup(invited_id, group_id int64) (bool, error) {
 	var count int
 	err := DB.QueryRow("SELECT COUNT(*) FROM invitations_groups WHERE invited_id = ? AND group_id = ?", invited_id, group_id).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	return count > 0, err
 }

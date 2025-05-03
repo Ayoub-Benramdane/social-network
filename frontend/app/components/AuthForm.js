@@ -245,37 +245,37 @@ export default function AuthForm({ onLoginSuccess }) {
             {!isLogin && (
               <>
                 {/* <div className="form-row"> */}
-                  <div className="form-group">
-                    <label htmlFor="firstName">First Name</label>
-                    <input
-                      type="text"
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      className={errors.firstName ? "error" : ""}
-                      placeholder="firstname"
-                    />
-                    {errors.firstName && (
-                      <span className="error-text">{errors.firstName}</span>
-                    )}
-                  </div>
+                <div className="form-group">
+                  <label htmlFor="firstName">First Name</label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className={errors.firstName ? "error" : ""}
+                    placeholder="firstname"
+                  />
+                  {errors.firstName && (
+                    <span className="error-text">{errors.firstName}</span>
+                  )}
+                </div>
 
-                  <div className="form-group">
-                    <label htmlFor="lastName">Last Name</label>
-                    <input
-                      type="text"
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      className={errors.lastName ? "error" : ""}
-                      placeholder="lastname"
-                    />
-                    {errors.lastName && (
-                      <span className="error-text">{errors.lastName}</span>
-                    )}
-                  </div>
+                <div className="form-group">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className={errors.lastName ? "error" : ""}
+                    placeholder="lastname"
+                  />
+                  {errors.lastName && (
+                    <span className="error-text">{errors.lastName}</span>
+                  )}
+                </div>
                 {/* </div> */}
 
                 <div className="form-group">
@@ -298,20 +298,14 @@ export default function AuthForm({ onLoginSuccess }) {
                   <select
                     id="privacy"
                     name="privacy"
-                    required
+                    // required
                     value={formData.privacy}
                     onChange={handleChange}
                     className="privacy-select"
                   >
-                    <option value="">
-                      Select Privacy
-                    </option>
-                    <option value="public">
-                      Public
-                    </option>
-                    <option value="private">
-                      Private
-                    </option>
+                    <option value="">Select Privacy</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
                   </select>
                 </div>
 

@@ -15,9 +15,9 @@
 //         method: "GET",
 //         credentials: "include",
 //       });
-      
+
 //       console.log("Status:", response.status);
-      
+
 //       if (!response.ok) throw new Error('Failed to fetch notifications');
 
 //       const data = await response.json();
@@ -96,7 +96,7 @@
 //           <span>Notifications</span>
 //           <button onClick={markAllAsRead}>Mark all as read</button>
 //         </div>
-  
+
 //         <div className="notification-type-toggle">
 //           <button
 //             onClick={() => setNotificationType("all")}
@@ -117,7 +117,7 @@
 //             Chat
 //           </button>
 //         </div>
-  
+
 //         <ul className="notification-list">
 //           {filteredNotifications.length === 0 ? (
 //             <li className="no-notifications">No notifications</li>
@@ -136,7 +136,7 @@
 //       </div>
 //     </div>
 //   );
-// }  
+// }
 
 // export default Notifications;
 
@@ -187,11 +187,10 @@
 // //   );
 // // }
 
-
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import "../styles/Notifications.css";
-import {connectSocket, subscribeToMessages} from "./websocket";
+import { connectSocket, subscribeToMessages } from "./websocket";
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -263,9 +262,8 @@ const Notifications = () => {
     connectSocket();
     subscribeToMessages((data) => {
       if (data.type === "notification") {
-
         console.log("aaaaa");
-        
+
         setNotifications((prev) => [data.notification, ...prev]);
       }
     });

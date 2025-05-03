@@ -21,12 +21,12 @@ export default function ProfileForm() {
         const response = await fetch("http://localhost:8404/profile", {
           method: "GET",
           headers: {
-        //     "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
-        //   },
-        // });
-               "Content-Type": "application/json",
-             },
-        //    body: JSON.stringify(postFormInput),
+            //     "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+            //   },
+            // });
+            "Content-Type": "application/json",
+          },
+          //    body: JSON.stringify(postFormInput),
         });
 
         if (!response.ok) {

@@ -71,7 +71,6 @@ func GetPosts(user_id int64, followers []structs.User) ([]structs.Post, error) {
 		var date time.Time
 		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
 		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
-			fmt.Println(err)
 			return nil, err
 		}
 		post.CreatedAt = TimeAgo(date)
@@ -123,7 +122,6 @@ func GetPostsByUser(user_id, my_id int64, followed bool) ([]structs.Post, error)
 		var date time.Time
 		err = rows.Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.Author, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
 		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
-			fmt.Println(err)
 			return nil, err
 		}
 		post.CreatedAt = TimeAgo(date)
@@ -197,7 +195,7 @@ func GetPost(user_id, post_id, group_id int64) (structs.Post, error) {
 		post.IsLiked, err = PostIsLiked(post.ID, user_id)
 		return post, err
 	}
-	err := DB.QueryRow("SELECT p.id, p.title, p.content, categories.name, categories.color, categories.background, users.id, users.username, users.avatar, p.created_at, p.total_likes, p.total_comments, p.image FROM group_posts p JOIN categories ON categories.id = p.category_id JOIN users ON p.user_id = users.id WHERE p.id = ? AND p.group_id = ?", post_id, group_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Image)
+	err := DB.QueryRow("SELECT p.id, p.title, p.content, categories.name, categories.color, categories.background, users.id, users.username, users.avatar, p.created_at, p.total_likes, p.total_comments, g.privacy, p.image FROM group_posts p JOIN groups g ON g.id = p.group_id JOIN categories ON categories.id = p.category_id JOIN users ON p.user_id = users.id WHERE p.id = ? AND p.group_id = ?", post_id, group_id).Scan(&post.ID, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &post.UserID, &post.Author, &post.Avatar, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
 	if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
 		return structs.Post{}, err
 	}
@@ -220,8 +218,5 @@ func GetCountUserPosts(id int64) (int64, error) {
 func IsAuthorized(user_id, post_id int64) (bool, error) {
 	var count int
 	err := DB.QueryRow("SELECT COUNT(*) FROM post_privacy WHERE post_id = ? AND user_id = ?", post_id, user_id).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	return count > 0, err
 }

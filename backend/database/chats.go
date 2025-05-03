@@ -53,33 +53,30 @@ func GetGroupConversation(group_id int64) ([]structs.Message, error) {
 	return chats, nil
 }
 
-func GetCountUserMessages(user_id int64) (int64, error) {
+func GetCountUserMessages(user_id int64) (int64, int64, error) {
 	var count int64
 	var count2 int64
 	err := DB.QueryRow("SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND status = ?", user_id, "unread").Scan(&count)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	rows, err := DB.Query("SELECT messages_not_read FROM group_status_messages WHERE user_id = ?", user_id)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer rows.Close()
 	var count1 int64
 	for rows.Next() {
 		if err := rows.Scan(&count1); err != nil {
-			return 0, err
+			return 0, 0, err
 		}
 		count2 += count1
 	}
-	return count + count2, nil
+	return count, count2, nil
 }
 
 func GetCountConversationMessages(sender_id, user_id int64) (int64, error) {
 	var count int64
 	err := DB.QueryRow("SELECT COUNT(*) FROM messages WHERE sender_id = ? AND receiver_id = ? AND status = ?", sender_id, user_id, "unread").Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
+	return count, err
 }

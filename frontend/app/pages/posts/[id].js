@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-// import { useRouter } from "next/router";
+import { useRouter } from "next/router";
 import Navbar from "../../components/NavBar";
 import "../../styles/PostPage.css";
+// import { useParams } from "next/navigation";
 
 export default function PostPage() {
   const router = useRouter();
@@ -12,6 +13,12 @@ export default function PostPage() {
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [groupImage, setGroupImage] = useState(null);
+  // const [commentText, setCommentText] = useState("");
+  // const [imageFile, setImageFile] = useState(null);
+
+  // const params = useParams();
+  // const postId = params.id;
 
   useEffect(() => {
     if (!id) return;
@@ -46,17 +53,17 @@ export default function PostPage() {
     e.preventDefault();
     if (!newComment.trim()) return;
 
+    const formData = new FormData();
+    formData.append("post_id", id);
+    formData.append("content", newComment);
+    if (groupImage) {
+      formData.append("commentImage", groupImage);
+    }
     try {
-      const response = await fetch("http://localhost:8404/comments", {
+      const response = await fetch("http://localhost:8404/comment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         credentials: "include",
-        body: JSON.stringify({
-          postId: parseInt(id),
-          content: newComment,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -65,13 +72,16 @@ export default function PostPage() {
 
       const data = await response.json();
 
+      // Add the new comment to the list
       setComments([...comments, data]);
 
+      // Update the total comments count
       setPost({
         ...post,
         TotalComments: post.TotalComments + 1,
       });
 
+      // Clear the comment input
       setNewComment("");
     } catch (err) {
       console.error("Error adding comment:", err);
@@ -95,7 +105,7 @@ export default function PostPage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error liking post:", errorData);
-        
+
         throw new Error("Failed to like post");
       }
 
@@ -194,11 +204,11 @@ export default function PostPage() {
           <div className="post-actions">
             <div className="action-like" onClick={handleLike}>
               <img src="/icons/like.svg" alt="Like" />
-              <p>{post.total_likes} Likes</p>
+              <p>{post.TotalLikes} Likes</p>
             </div>
             <div className="action-comment">
               <img src="/icons/comment.svg" alt="Comment" />
-              <p>{post.total_comments} Comments</p>
+              <p>{post.TotalComments} Comments</p>
             </div>
           </div>
 
@@ -238,6 +248,18 @@ export default function PostPage() {
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
               />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setGroupImage(e.target.files[0])}
+              />
+              {groupImage && (
+                <img
+                  src={URL.createObjectURL(groupImage)}
+                  alt="Preview"
+                  style={{ width: 100, marginTop: 10 }}
+                />
+              )}
               <button type="submit" className="comment-submit-btn">
                 Post Comment
               </button>

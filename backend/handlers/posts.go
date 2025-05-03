@@ -394,11 +394,47 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	post.Comments, err = database.GetPostComments(post_id, post.GroupID)
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve comments"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
 }
 
-func GetCategoryPosts(w http.ResponseWriter, r *http.Request) {
+func GetTopCategories(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		response := map[string]string{"error": "Method not allowed"}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	user, err := GetUserFromSession(r)
+	if err != nil || user == nil {
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	categories, err := database.GetBestCategories()
+	if err != nil {
+		response := map[string]string{"error": "Failed to retrieve categories"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(categories)
+}
+
+func GetPostsByCategory(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -463,74 +499,6 @@ func GetCategoryPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts_category)
 }
-
-// func GroupPostHandler(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodGet {
-// 		response := map[string]string{"error": "Method not allowed"}
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	user, err := GetUserFromSession(r)
-// 	if err != nil || user == nil {
-// 		response := map[string]string{"error": "Failed to retrieve user"}
-// 		w.WriteHeader(http.StatusUnauthorized)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	var group_id int64
-// 	err = json.NewDecoder(r.Body).Decode(&group_id)
-// 	if err != nil {
-// 		response := map[string]string{"error": "Invalid request body"}
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	group, err := database.GetGroupById(group_id)
-// 	if err != nil {
-// 		response := map[string]string{"error": "Failed to retrieve groups"}
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	member, err := database.IsMemberGroup(user.ID, group_id)
-// 	if err != nil {
-// 		response := map[string]string{"error": "Failed to check if user is a member"}
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	} else if !member && group.Privacy == "private" {
-// 		response := map[string]string{"error": "You are not authorized to view this post"}
-// 		w.WriteHeader(http.StatusUnauthorized)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	var post_id int64
-// 	err = json.NewDecoder(r.Body).Decode(&post_id)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		response := map[string]string{"error": "Invalid request body"}
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	post, err := database.GetPostGroup(post_id, group_id)
-// 	if err != nil {
-// 		response := map[string]string{"error": "Failed to retrieve post"}
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		json.NewEncoder(w).Encode(response)
-// 		return
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(post)
-// }
 
 func ValidatePost(title, content, privacy string) (map[string]string, bool) {
 	errors := make(map[string]string)

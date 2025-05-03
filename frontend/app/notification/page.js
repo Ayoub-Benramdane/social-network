@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import "../styles/NotificationPage.css";
 import NotificationCard from "../components/NotificationCard";
+import Navbar from "../components/NavBar";
 
 export default function NotificationPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -37,10 +38,18 @@ export default function NotificationPage() {
         unread: false,
       },
   ];
+  
+  const currentUser = {
+    first_name: "Mohammed Amine",
+    last_name: "Dinani",
+    avatar: "./avatars/thorfinn-vinland-saga-episode-23-1.png",
+    username: "mdinani",
+  };
 
   return (
     <div className="notification-container">
       <div className="notification-card">
+      <Navbar user={currentUser} />
         <div className="notification-header">
           <h1 className="notification-title">Notifications</h1>
           <button className="mark-read-button">Mark all as read</button>

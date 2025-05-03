@@ -19,6 +19,51 @@
   background-size: cover;
   background-position: center;
 }
+.picture-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; 
+}
+
+.cover-preview {
+  max-width: 90%;
+  max-height: 80%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  animation: zoomIn 0.3s ease;
+}
+
+.close-preview {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  font-size: 3rem;
+  color: white;
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 
 .profile-avatar-container {
   position: absolute;
@@ -704,6 +749,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #1E293B;
+  cursor: pointer;
 }
 
 .post-meta {

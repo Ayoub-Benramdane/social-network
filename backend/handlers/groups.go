@@ -272,6 +272,9 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(response)
 			return
 		}
+		group.Role = "admin"
+	} else {
+		group.Role = "member"
 	}
 
 	data := struct {
@@ -287,6 +290,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 		Posts:       posts,
 		Invitations: invitations,
 	}
+	// fmt.Println("data", data)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)

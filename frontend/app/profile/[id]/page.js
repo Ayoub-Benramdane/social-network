@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
+import PostsComponent from "@/app/components/PostsComponent";
 
 import "../../styles/ProfilePage.css";
 
@@ -12,6 +13,7 @@ export default function ProfilePage() {
 
   const [savedPosts, setSavedPosts] = useState([]);
   const [isLoadingSavedPosts, setIsLoadingSavedPosts] = useState(false);
+  const [picturePreview, setPicturePreview] = useState(false);
   const [userData, setUserData] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [userPosts, setUserPosts] = useState([]);
@@ -27,6 +29,9 @@ export default function ProfilePage() {
   const router = useRouter();
   console.log("Welcome:", id);
 
+  function togglePicPreview() {
+    setPicturePreview(!picturePreview);
+  }
   async function fetchSavedPosts() {
     try {
       const response = await fetch("http://localhost:8404/get_saved_posts", {
@@ -41,7 +46,7 @@ export default function ProfilePage() {
         const data = await response.json();
         console.log("saved posts data", data);
         setIsLoadingSavedPosts(false);
-        setSavedPosts(data || []);
+        setSavedPosts(data.saved_posts || []);
       } else {
         console.error("Failed to fetch saved posts");
       }
@@ -75,7 +80,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        const response = await fetch("http://localhost:8404/session", {
+        const response = await fetch("http://localhost:8404/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -174,7 +179,7 @@ export default function ProfilePage() {
     setIsLoadingFollowers(true);
     try {
       const response = await fetch(
-        "http://localhost:8404/followers?user_id=2",
+        `http://localhost:8404/followers?user_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -205,7 +210,7 @@ export default function ProfilePage() {
     setIsLoadingFollowing(true);
     try {
       const response = await fetch(
-        "http://localhost:8404/following?user_id=2",
+        `http://localhost:8404/followers?user_id=${id}`,
         {
           method: "GET",
           headers: {
@@ -229,32 +234,32 @@ export default function ProfilePage() {
     }
   };
 
-  const fetchGroups = async () => {
-    if (groups.length > 0) return;
+  // const fetchGroups = async () => {
+  //   if (groups.length > 0) return;
 
-    setIsLoadingGroups(true);
-    try {
-      const response = await fetch("http://localhost:8404/groups", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+  //   setIsLoadingGroups(true);
+  //   try {
+  //     const response = await fetch("http://localhost:8404/groups", {
+  //       method: "GET",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       credentials: "include",
+  //     });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log("groups data", data);
-        setGroups(data || []);
-      } else {
-        console.error("Failed to fetch groups");
-      }
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setIsLoadingGroups(false);
-    }
-  };
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       console.log("groups data", data);
+  //       setGroups(data || []);
+  //     } else {
+  //       console.error("Failed to fetch groups");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching groups:", error);
+  //   } finally {
+  //     setIsLoadingGroups(false);
+  //   }
+  // };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -265,8 +270,6 @@ export default function ProfilePage() {
       fetchFollowers();
     } else if (tab === "following") {
       fetchFollowing();
-    } else if (tab === "groups") {
-      fetchGroups();
     } else if (tab === "saved") {
       fetchSavedPosts();
     }
@@ -333,52 +336,6 @@ export default function ProfilePage() {
     );
   }
 
-  // const samplePosts = [
-  //   {
-  //     id: 1,
-  //     title: "My First Post",
-  //     content:
-  //       "This is a sample post content. Your actual posts will appear here when you create them.",
-  //     author: `${userData.ProfileInfo.first_name} ${userData.ProfileInfo.last_name}`,
-  //     created_at: "3 days ago",
-  //     privacy: "public",
-  //     category: "Technology",
-  //     image: "https://via.placeholder.com/500x300",
-  //     total_likes: 24,
-  //     total_comments: 8,
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "Another Great Post",
-  //     content: "Here's another sample post showing how your content will look.",
-  //     author: `${userData.ProfileInfo.first_name} ${userData.ProfileInfo.last_name}`,
-  //     created_at: "1 week ago",
-  //     privacy: "private",
-  //     category: "Health",
-  //     total_likes: 15,
-  //     total_comments: 3,
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "Check Out This Photo",
-  //     content: "I took this amazing photo yesterday. What do you think?",
-  //     author: `${userData.ProfileInfo.first_name} ${userData.ProfileInfo.last_name}`,
-  //     created_at: "2 weeks ago",
-  //     privacy: "public",
-  //     category: "Photography",
-  //     image: "https://via.placeholder.com/500x300",
-  //     total_likes: 42,
-  //     total_comments: 12,
-  //   },
-  // ];
-
-  // const postsToDisplay =
-  //   userPosts.length > 0
-  //     ? userPosts
-  //     : userData.ProfileInfo.total_posts > 0
-  //     ? samplePosts
-  //     : [];
-
   return (
     <div className="app-container">
       <div className="profile-container">
@@ -387,6 +344,19 @@ export default function ProfilePage() {
         </button>
 
         <div className="profile-header">
+          {picturePreview && (
+            <div className="picture-preview">
+              <img
+                src={userData.ProfileInfo.cover}
+                alt="Cover"
+                className="cover-preview"
+                // style={{ width: "100%", height: "100%" }}
+              />
+              <button className="close-preview" onClick={togglePicPreview}>
+                &times;
+              </button>
+            </div>
+          )}
           <div
             className="profile-cover"
             style={{
@@ -394,8 +364,12 @@ export default function ProfilePage() {
                 ? `url(${userData.ProfileInfo.cover})`
                 : "linear-gradient(135deg, #3555F9 0%, #6687FF 100%)",
             }}
+            onClick={togglePicPreview}
           >
-            <div className="profile-avatar-container">
+            <div
+              className="profile-avatar-container"
+              onClick={togglePicPreview}
+            >
               <img
                 src={userData.ProfileInfo.avatar || "./inconnu/avatar.png"}
                 alt={`${userData.ProfileInfo.username || "User"}'s profile`}
@@ -491,12 +465,6 @@ export default function ProfilePage() {
                 Saved Posts
               </button>
             )}
-            <button
-              className={`tab-button ${activeTab === "groups" ? "active" : ""}`}
-              onClick={() => handleTabChange("groups")}
-            >
-              Groups
-            </button>
           </div>
 
           <div className="tab-content">
@@ -509,70 +477,7 @@ export default function ProfilePage() {
               ) : userPosts.length > 0 ? (
                 <div className="posts-modern-layout">
                   {userPosts.map((post) => (
-                    <div key={post.id} className="post-card-modern">
-                      <div className="post-card-header">
-                        <div className="post-author-info">
-                          <img
-                            src={
-                              userData.ProfileInfo.avatar ||
-                              "./inconnu/avatar.png"
-                            }
-                            alt={post.author}
-                            className="post-author-avatar"
-                          />
-                          <div>
-                            <h4 className="post-author-name">{post.author}</h4>
-                            <div className="post-meta">
-                              <span className="post-date">
-                                {post.created_at}
-                              </span>
-                              <span className="post-visibility">
-                                <img
-                                  src={`./icons/${post.privacy}.svg`}
-                                  alt={post.privacy}
-                                  className="post-visibility-icon"
-                                />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="post-category-badge">
-                          {post.category}
-                        </div>
-                      </div>
-
-                      <div className="post-card-content">
-                        <h3 className="post-title-modern">{post.title}</h3>
-                        <p className="post-text-modern">{post.content}</p>
-
-                        {post.image && (
-                          <div className="post-image-container">
-                            <img
-                              src={post.image}
-                              alt={post.title}
-                              className="post-image-modern"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="post-card-footer">
-                        <div className="post-engagement">
-                          <div
-                            className="post-stat"
-                            onClick={() => handleLike(post.id)}
-                          >
-                            <img src="/icons/like.svg" alt="Like" />
-                            <span>{post.total_likes}</span>
-                          </div>
-                          <div className="post-stat">
-                            <img src="/icons/comment.svg" alt="Comment" />
-                            <span>{post.total_comments}</span>
-                          </div>
-                        </div>
-                        <button className="post-view-button">View Post</button>
-                      </div>
-                    </div>
+                    <PostsComponent key={post.id} post={post} />
                   ))}
                 </div>
               ) : (
@@ -693,81 +598,82 @@ export default function ProfilePage() {
               ) : savedPosts.length > 0 ? (
                 <div className="posts-container">
                   {savedPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="post-card"
-                      style={{ position: "relative" }}
-                    >
-                      <div className="bookmark-icon">
-                        <img
-                          src="/icons/bookmark-filled.svg"
-                          alt="Saved"
-                          width="18"
-                          height="18"
-                        />
-                      </div>
+                    <PostsComponent key={post.id} post={post} />
+                    // <div
+                    //   key={post.id}
+                    //   className="post-card"
+                    //   style={{ position: "relative" }}
+                    // >
+                    //   <div className="bookmark-icon">
+                    //     <img
+                    //       // src="/icons/bookmark-filled.svg"
+                    //       alt="Saved"
+                    //       width="18"
+                    //       height="18"
+                    //     />
+                    //   </div>
 
-                      <div className="header">
-                        <div className="post-header">
-                          <img
-                            src={post.author_avatar || "./inconnu/avatar.png"}
-                            alt={post.author}
-                            className="author-avatar"
-                          />
-                          <div className="author-info">
-                            <h4 className="author-name">{post.author}</h4>
-                            <div className="timestamp">
-                              <img
-                                src="./icons/created_at.svg"
-                                alt="Created at"
-                              />
-                              <p
-                                className="post-time"
-                                style={{ color: "#B8C3E1", fontSize: "12px" }}
-                              >
-                                {post.created_at}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="post-privacy">
-                          <img
-                            src={`./icons/${post.privacy}.svg`}
-                            width={"32px"}
-                            height={"32px"}
-                            alt={post.privacy}
-                            className="privacy-icon"
-                          />
-                        </div>
-                      </div>
+                    //   <div className="header">
+                    //     <div className="post-header">
+                    //       <img
+                    //         src={post.author_avatar || "./inconnu/avatar.png"}
+                    //         // alt={post.author}
+                    //         className="author-avatar"
+                    //       />
+                    //       <div className="author-info">
+                    //         <h4 className="author-name">{post.author}</h4>
+                    //         <div className="timestamp">
+                    //           <img
+                    //             src="./icons/created_at.svg"
+                    //             alt="Created at"
+                    //           />
+                    //           <p
+                    //             className="post-time"
+                    //             style={{ color: "#B8C3E1", fontSize: "12px" }}
+                    //           >
+                    //             {post.created_at}
+                    //           </p>
+                    //         </div>
+                    //       </div>
+                    //     </div>
+                    //     <div className="post-privacy">
+                    //       <img
+                    //         src={`./icons/${post.privacy}.svg`}
+                    //         width={"32px"}
+                    //         height={"32px"}
+                    //         alt={post.privacy}
+                    //         className="privacy-icon"
+                    //       />
+                    //     </div>
+                    //   </div>
 
-                      <div className="post-content">
-                        <h3 className="post-title">{post.title}</h3>
-                        <p className="post-text">{post.content}</p>
-                        {post.image && (
-                          <img
-                            src={post.image}
-                            alt={post.title}
-                            className="post-image"
-                          />
-                        )}
-                        <div className="post-category">{post.category}</div>
-                      </div>
-                      <div className="post-actions">
-                        <div
-                          className="action-like"
-                          onClick={() => handleLike(post.id)}
-                        >
-                          <img src="/icons/like.svg" alt="Like" />
-                          <p>{post.total_likes} Likes</p>
-                        </div>
-                        <div className="action-comment">
-                          <img src="/icons/comment.svg" alt="Comment" />
-                          <p>{post.total_comments} Comments</p>
-                        </div>
-                      </div>
-                      <p className="see-post-link">See post &rarr;</p>
-                    </div>
+                    //   <div className="post-content">
+                    //     <h3 className="post-title">{post.title}</h3>
+                    //     <p className="post-text">{post.content}</p>
+                    //     {post.image && (
+                    //       <img
+                    //         src={post.image}
+                    //         alt={post.title}
+                    //         className="post-image"
+                    //       />
+                    //     )}
+                    //     <div className="post-category">{post.category}</div>
+                    //   </div>
+                    //   <div className="post-actions">
+                    //     <div
+                    //       className="action-like"
+                    //       onClick={() => handleLike(post.id)}
+                    //     >
+                    //       <img src="/icons/like.svg" alt="Like" />
+                    //       <p>{post.total_likes} Likes</p>
+                    //     </div>
+                    //     <div className="action-comment">
+                    //       <img src="/icons/comment.svg" alt="Comment" />
+                    //       <p>{post.total_comments} Comments</p>
+                    //     </div>
+                    //   </div>
+                    //   <p className="see-post-link">See post &rarr;</p>
+                    // </div>
                   ))}
                 </div>
               ) : (

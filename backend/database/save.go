@@ -2,6 +2,7 @@ package database
 
 import (
 	structs "social-network/data"
+	"strings"
 	"time"
 )
 
@@ -24,7 +25,7 @@ func UnsavePost(user_id, post_id, group_id int64) error {
 }
 
 func GetSavedPosts(user_id int64) ([]structs.Post, error) {
-	rows, err := DB.Query("SELECT p.id, u.username, u.avatar, p.title, p.content, p.image, c.name, c.color, c.background, p.created_at, p.total_likes, p.total_comments, p.privacy FROM saves s JOIN posts p ON s.post_id = p.id JOIN categories c ON c.id = p.category_id JOIN users u ON u.id = p.user_id WHERE s.user_id = ?", user_id)
+	rows, err := DB.Query("SELECT p.id, u.username, u.avatar, p.title, p.content, c.name, c.color, c.background, p.created_at, p.total_likes, p.total_comments, p.privacy, p.image FROM saves s JOIN posts p ON s.post_id = p.id JOIN categories c ON c.id = p.category_id JOIN users u ON u.id = p.user_id WHERE s.user_id = ?", user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +34,8 @@ func GetSavedPosts(user_id int64) ([]structs.Post, error) {
 	for rows.Next() {
 		var post structs.Post
 		var date time.Time
-		err := rows.Scan(&post.ID, &post.Author, &post.Avatar, &post.Title, &post.Content, &post.Image, &post.Category, &post.CategoryColor, &post.CategoryBackground, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy)
-		if err != nil {
+		err := rows.Scan(&post.ID, &post.Author, &post.Avatar, &post.Title, &post.Content, &post.Category, &post.CategoryColor, &post.CategoryBackground, &date, &post.TotalLikes, &post.TotalComments, &post.Privacy, &post.Image)
+		if err != nil && !strings.Contains(err.Error(), `name "image": converting NULL to string`) {
 			return nil, err
 		}
 		post.CreatedAt = TimeAgo(date)

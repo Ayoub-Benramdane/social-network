@@ -202,8 +202,10 @@ export default function Navbar({ user }) {
             className={`nav-link ${activeLink === "home" ? "active" : ""}`}
             onClick={() => setActiveLink("home")}
           >
+            <Link href="/">
             <img src="./icons/home.svg" alt="Home" />
             <span>Home</span>
+            </Link>
           </button>
 
           <button
@@ -220,8 +222,10 @@ export default function Navbar({ user }) {
             className={`nav-link ${activeLink === "events" ? "active" : ""}`}
             onClick={() => setActiveLink("events")}
           >
+            <Link href="/events">
             <img src="./icons/events.svg" alt="Events" />
             <span>Events</span>
+            </Link>
           </button>
         </div>
       </div>
@@ -238,16 +242,23 @@ export default function Navbar({ user }) {
           <img src="./icons/notification.svg" alt="Notifications" />
           {user.total_notifications > 0 && (
             <span className="badge">{user.total_notifications || 1}</span>
-          )}
+          )}{" "}
+          : (
+          <span className="notification-count">
+            {user.total_notifications || 0}
+          </span>
+          )
         </button>
 
         {showNotifications && <NotificationsComponent />}
 
         <button className="action-icon message-badge">
-          <img src="./icons/message.svg" alt="Messages" />
-          {user.messages > 0 && (
-            <span className="badge">{user.messages || 3}</span>
-          )}
+          <Link href="/messages">
+            <img src="./icons/message.svg" alt="Messages" />
+            {user.messages > 0 && (
+              <span className="badge">{user.messages || 3}</span>
+            )}
+          </Link>
         </button>
 
         <div className="profile-dropdown">

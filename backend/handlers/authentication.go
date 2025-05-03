@@ -20,6 +20,7 @@ import (
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -29,6 +30,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var login structs.User
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
+		fmt.Println("Error decoding JSON:", err)
 		response := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -37,6 +39,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	errors, valid := ValidateInput("", "", "", login.Email, login.Password, "", "", "", time.Now())
 	if !valid {
+		fmt.Println("Validation error:", errors)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":  "Validation error",
@@ -48,8 +51,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := database.GetUserByEmail(login.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("1")
-			fmt.Println(err)
+			fmt.Println("Invalid email or password")
 			response := map[string]string{"error": "Invalid email or password"}
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(response)
@@ -63,8 +65,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
-		fmt.Println("2")
-		fmt.Println(err)
+		fmt.Println("Password is incorrect")
 		response := map[string]string{"error": "Password is incorrect"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -109,6 +110,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -116,9 +118,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var register structs.User
-
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
+		fmt.Println("Error parsing form data:", err)
 		http.Error(w, "Cannot parse form", http.StatusBadRequest)
 		return
 	}
@@ -135,8 +137,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	temp := r.FormValue("dateOfBirth")
 	register.DateOfBirth, err = time.Parse("2006-01-02", temp)
 	if err != nil {
-		fmt.Println("here")
-		fmt.Println(err)
+		fmt.Println("Error parsing date of birth:", err)
 		response := map[string]string{"error": "Error Parsing Date"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -145,6 +146,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmPass, register.Privacy, register.Bio, register.DateOfBirth)
 	if !valid {
+		fmt.Println("Validation error:", errors)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":  "Validation error",
@@ -155,8 +157,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
 	if err != nil {
-		fmt.Println("1")
-		fmt.Println(err)
+		fmt.Println("Error hashing password:", err)
 		response := map[string]string{"error": "Error hashing password"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -165,8 +166,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	sessionToken, err := uuid.NewV4()
 	if err != nil {
-		fmt.Println("2")
-		fmt.Println(err)
 		log.Printf("Error generating session token: %v", err)
 		response := map[string]string{"error": "Failed to generate session token"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -177,8 +176,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var imagePath string
 	image, header, err := r.FormFile("avatar")
 	if err != nil && err.Error() != "http: no such file" {
-		fmt.Println("3")
-		fmt.Println(err)
+		fmt.Println("Error retrieving image:", err)
 		response := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -186,8 +184,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	} else if image != nil {
 		imagePath, err = SaveImage(image, header, "../frontend/public/avatars/")
 		if err != nil {
-			fmt.Println("4")
-			fmt.Println(err)
+			fmt.Println("Error saving image:", err)
 			response := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
@@ -201,10 +198,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	var coverPath string
 	cover, header, err := r.FormFile("cover")
-	fmt.Println(cover)
 	if err != nil && err.Error() != "http: no such file" {
-		fmt.Println("3")
-		fmt.Println(err)
+		fmt.Println("Error retrieving cover:", err)
 		response := map[string]string{"error": "Failed to retrieve cover"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -212,8 +207,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	} else if cover != nil {
 		coverPath, err = SaveImage(cover, header, "../frontend/public/covers/")
 		if err != nil {
-			fmt.Println("4")
-			fmt.Println(err)
+			fmt.Println("Error saving cover:", err)
 			response := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
@@ -227,14 +221,17 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
+			fmt.Println("Error inserting user:", err)
 			response := map[string]string{"error": "Email already exists"}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(response)
 		} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
+			fmt.Println("Error inserting user:", err)
 			response := map[string]string{"error": "Username already exists"}
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(response)
 		} else {
+			fmt.Println("Error inserting user:", err)
 			log.Printf("Error inserting user: %v", err)
 			response := map[string]string{"error": "Registration failed"}
 			w.WriteHeader(http.StatusInternalServerError)
@@ -250,6 +247,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Invalid request method")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -258,6 +256,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Error retrieving user:", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -265,6 +264,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := database.DeleteSession(user.ID); err != nil {
+		fmt.Println("Error deleting session:", err)
 		log.Printf("Error deleting session: %v", err)
 		response := map[string]string{"error": "Failed to delete session"}
 		w.WriteHeader(http.StatusInternalServerError)

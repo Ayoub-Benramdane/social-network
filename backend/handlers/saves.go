@@ -38,15 +38,18 @@ func SaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, err := database.GetGroupById(int64(ids.GroupID))
-	if err != nil {
-		response := map[string]string{"error": "Failed to retrieve groups"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
+	var group structs.Group
+	if ids.GroupID != 0 {
+		group, err = database.GetGroupById(int64(ids.GroupID))
+		if err != nil {
+			response := map[string]string{"error": "Failed to retrieve groups"}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
 	}
 
-	post, err := database.GetPost(user.ID, ids.GroupID, ids.PostID)
+	post, err := database.GetPost(user.ID, ids.PostID, ids.GroupID)
 	if err != nil {
 		response := map[string]string{"error": "Failed to retrieve post"}
 		w.WriteHeader(http.StatusInternalServerError)

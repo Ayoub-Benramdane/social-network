@@ -4,42 +4,33 @@ import "../styles/LeftSideBar.css";
 import UserCard from "./UserCard";
 
 export default function LeftSidebar({ users, bestcategories }) {
-  const [searchQuery, setSearchQuery] = useState("");
-
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
   };
 
-  const handleFollow = (userId) => {
-    console.log(`Following user with ID: ${userId}`);
-  };
-
   return (
     <div className="left-sidebar">
-      <div className="search-box">
-        <div className="search-input-container">
-          <img src="/icons/search.svg" className="search-icon" alt="Search" />
-          <input
-            type="text"
-            placeholder="Search users and groups"
-            value={searchQuery}
-            onChange={handleSearch}
-          />
-        </div>
-      </div>
-
       <div className="sidebar-section">
         <div className="section-header">
           <h3>Suggested Users</h3>
-          <button className="see-all-btn">
+          <button
+            className="see-all-btn"
+            onClick={() => {
+              window.location.href = "/allusers";
+            }}
+          >
             See all <span className="arrow">→</span>
           </button>
         </div>
-
+        {users.length === 0 && (
+          <div className="no-users">
+            <p>No users found</p>
+          </div>
+        )}
         <ul className="user-list">
           {users.map((user) => (
             // <a key={user.id} href={`/profile/${user.id}`} className="user-link">
-              <UserCard key={user.id} user={user} action={"follow"} />
+            <UserCard key={user.id} user={user} action={"follow"} />
             // </a>
 
             // <li key={user.id} className="user-item">
@@ -71,12 +62,22 @@ export default function LeftSidebar({ users, bestcategories }) {
       <div className="sidebar-section">
         <div className="section-header">
           <h3>Popular Categories</h3>
-          <button className="see-all-btn">
+          <button
+            className="see-all-btn"
+            onClick={() => {
+              window.location.href = "/allcategories";
+            }}
+          >
             See all <span className="arrow">→</span>
           </button>
         </div>
 
         <ul className="category-list">
+          {bestcategories.length === 0 && (
+            <div className="no-categories">
+              <p>No categories found</p>
+            </div>
+          )}
           {bestcategories.map((category) => (
             <li key={category.id} className="category-item">
               <div className="category-icon">

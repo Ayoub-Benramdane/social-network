@@ -4,8 +4,8 @@ import (
 	structs "social-network/data"
 )
 
-func CreateCategoryies() error {
-	if cat := CheckCategory(); cat == nil {
+func CreateCategories() error {
+	if cat := CheckCategories(); cat == nil {
 		categories := []string{
 			"Sport", "General", "Tech", "Gaming", "Movies", "Music",
 			"Health", "Travel", "Food", "Fashion", "Education",
@@ -32,9 +32,9 @@ func CreateCategoryies() error {
 	return nil
 }
 
-func CheckCategory() *structs.Category {
+func CheckCategories() *structs.Category {
 	var cat structs.Category
-	err := DB.QueryRow("SELECT * FROM categories").Scan(&cat.ID, &cat.Name)
+	err := DB.QueryRow("SELECT * FROM categories").Scan(&cat.ID, &cat.Name, &cat.Color, &cat.Background)
 	if err != nil {
 		return nil
 	}
@@ -59,7 +59,7 @@ func GetCategories() ([]structs.Category, error) {
 }
 
 func GetBestCategories() ([]structs.Category, error) {
-	rows, err := DB.Query("SELECT c.id, c.name, COUNT(*) FROM categories c JOIN posts p ON p.category_id = c.id GROUP BY c.id ORDER BY COUNT(*) DESC LIMIT 5")
+	rows, err := DB.Query("SELECT c.id, c.name, COUNT(*) FROM categories c JOIN posts p ON p.category_id = c.id GROUP BY c.id ORDER BY COUNT(*) DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +78,5 @@ func GetBestCategories() ([]structs.Category, error) {
 func GetCategoryById(id int64) (*structs.Category, error) {
 	var category structs.Category
 	err := DB.QueryRow("SELECT id, name, color, background FROM categories WHERE id = ?", id).Scan(&category.ID, &category.Name, &category.Color, &category.Background)
-	if err != nil {
-		return nil, err
-	}
-	return &category, nil
+	return &category, err
 }

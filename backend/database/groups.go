@@ -28,6 +28,10 @@ func GetGroups(user_id int64) ([]structs.Group, error) {
 		if err != nil {
 			return nil, err
 		}
+		group.TotalMessages, err = GetCountConversationMessages(group.ID, user_id)
+		if err != nil {
+			return nil, err
+		}
 		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
 	}

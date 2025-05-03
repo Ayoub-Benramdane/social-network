@@ -31,7 +31,7 @@ export default function Home() {
           },
           credentials: "include",
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data === true) {

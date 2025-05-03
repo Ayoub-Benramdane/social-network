@@ -1,21 +1,37 @@
+// pages/post/[id].js
 "use client";
 import { useState, useEffect } from "react";
-// import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
-import { useRouter } from "next/router";
-import Navbar from "../../components/NavBar";
-import "../../styles/PostPage.css";
+
+// import { useRouter } from "next/router";
+import Navbar from "../../../components/NavBar";
+import "../../../styles/PostPage.css";
 
 export default function PostPage() {
   //   const router = useRouter();
-  const { id } = useParams();
+  let { id, group_id } = useParams();
+  const post_id = parseInt(id);
+  group_id = parseInt(group_id);
+  // const router = useRouter();
+  // const { id, group_id } = router.query;
+  const router = useRouter();
+
+  const goToHome = () => {
+    router.push("/");
+  };
 
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [groupImage, setGroupImage] = useState(null);
+  // const [commentText, setCommentText] = useState("");
+  // const [imageFile, setImageFile] = useState(null);
 
+  const params = useParams();
+  const postId = params.id;
 
   useEffect(() => {
     if (!id) return;
@@ -24,7 +40,7 @@ export default function PostPage() {
       setIsLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:8404/post?post_id=${id}&group_id=0`,
+          `http://localhost:8404/post?post_id=${id}&group_id=${group_id}`,
           {
             method: "GET",
             credentials: "include",
@@ -42,7 +58,7 @@ export default function PostPage() {
           console.log(data);
         }
 
-        // setComments(data.Comments || []);
+        setComments(data.comments || []);
       } catch (err) {
         console.log("Error fetching post:", err);
         setError("Failed to load post. Please try again later.");
@@ -58,17 +74,19 @@ export default function PostPage() {
     e.preventDefault();
     if (!newComment.trim()) return;
 
+    const formData = new FormData();
+    formData.append("post_id", postId);
+    formData.append("group_id", group_id);
+
+    formData.append("content", newComment);
+    if (groupImage) {
+      formData.append("commentImage", groupImage);
+    }
     try {
-      const response = await fetch("http://localhost:8404/comments", {
+      const response = await fetch("http://localhost:8404/comment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         credentials: "include",
-        body: JSON.stringify({
-          postId: parseInt(id),
-          content: newComment,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -102,9 +120,7 @@ export default function PostPage() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({
-          postId: parseInt(id),
-        }),
+        body: JSON.stringify({ post_id, group_id }),
       });
 
       if (!response.ok) {
@@ -112,10 +128,16 @@ export default function PostPage() {
       }
 
       // Update the total likes count
-      setPost({
-        ...post,
-        TotalLikes: post.TotalLikes + 1,
-      });
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setPost({
+          // ...post,
+          // TotalLikes: post.TotalLikes + 1,
+          ...post,
+          total_likes: updatedPost.total_likes,
+          is_liked: updatedPost.is_liked,
+        });
+      }
     } catch (err) {
       console.error("Error liking post:", err);
       alert("Failed to like post. Please try again.");
@@ -165,9 +187,20 @@ export default function PostPage() {
       </div>
     );
   }
-
+  
+  const currentUser = {
+    first_name: "Mohammed Amine",
+    last_name: "Dinani",
+    avatar: "./avatars/thorfinn-vinland-saga-episode-23-1.png",
+    username: "mdinani",
+  };
+  
   return (
     <div className="post-page-container">
+       <Navbar user={currentUser} />
+      <button onClick={goToHome} className="retry-button">
+        Go to Home
+      </button>
       {/* <Navbar /> */}
       <div className="post-page-content">
         <div className="post-page-card">
@@ -228,22 +261,36 @@ export default function PostPage() {
 
             <div className="comments-list">
               {comments.length > 0 ? (
-                comments.map((comment) => (
-                  <div key={comment.ID} className="comment-item">
-                    <div className="comment-header">
-                      <img
-                        src="avatar.jpg"
-                        alt={comment.Author}
-                        className="comment-avatar"
-                      />
-                      <div className="comment-author-info">
-                        <h4 className="comment-author">{comment.Author}</h4>
-                        <p className="comment-time">{comment.CreatedAt}</p>
+                comments.map((comment) => {
+                  console.log(comment);
+                  const key = `${comment.id || "defaultID"}-${
+                    comment.created_at || "defaultCreatedAt"
+                  }`;
+
+                  return (
+                    <div key={key} className="comment-item">
+                      <div className="comment-header">
+                        <img
+                          src="avatar.jpg"
+                          alt={comment.author}
+                          className="comment-avatar"
+                        />
+                        <div className="comment-author-info">
+                          <h4 className="comment-author">{comment.author}</h4>
+                          <p className="comment-time">{comment.created_at}</p>
+                        </div>
                       </div>
+                      <p className="comment-content">{comment.content}</p>
+                      {comment.image && (
+                        <img
+                          src={comment.image}
+                          alt="Comment image"
+                          className="comment-image"
+                        />
+                      )}
                     </div>
-                    <p className="comment-content">{comment.Content}</p>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <p className="no-comments">
                   No comments yet. Be the first to comment!
@@ -259,6 +306,18 @@ export default function PostPage() {
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
               />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setGroupImage(e.target.files[0])}
+              />
+              {groupImage && (
+                <img
+                  src={URL.createObjectURL(groupImage)}
+                  alt="Preview"
+                  style={{ width: 100, marginTop: 10 }}
+                />
+              )}
               <button type="submit" className="comment-submit-btn">
                 Post Comment
               </button>

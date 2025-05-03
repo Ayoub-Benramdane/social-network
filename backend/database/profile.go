@@ -30,6 +30,7 @@ func GetProfileInfo(user_id int64) (structs.User, error) {
 	if err != nil {
 		return structs.User{}, err
 	}
-	user.TotalMessages, err = GetCountUserMessages(user_id)
+	user.TotalChatsMessages, user.TotalGroupsMessages, err = GetCountUserMessages(user_id)
+	user.TotalMessages = user.TotalChatsMessages + user.TotalGroupsMessages
 	return user, err
 }
