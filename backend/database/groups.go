@@ -34,6 +34,10 @@ func GetGroups(user_id int64) ([]structs.Group, error) {
 		}
 		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
+		group.TotalPosts, err = GetCountGroupPosts(group.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return groups, nil
 }
@@ -54,6 +58,10 @@ func GetSuggestedGroups(user_id int64) ([]structs.Group, error) {
 		}
 		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
+		group.TotalPosts, err = GetCountGroupPosts(group.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return groups, nil
 }
@@ -74,6 +82,10 @@ func GetPendingGroups(user_id int64) ([]structs.Group, error) {
 		}
 		group.CreatedAt = date.Format("2006-01-02 15:04:05")
 		groups = append(groups, group)
+		group.TotalPosts, err = GetCountGroupPosts(group.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return groups, nil
 }
@@ -82,7 +94,11 @@ func GetGroupById(group_id int64) (structs.Group, error) {
 	var group structs.Group
 	var date time.Time
 	err := DB.QueryRow("SELECT g.id, g.name, g.description, g.image, g.cover, g.admin, g.created_at, u.username, g.members, g.privacy FROM groups g JOIN users u ON u.id = g.admin WHERE g.id = ?", group_id).Scan(&group.ID, &group.Name, &group.Description, &group.Image, &group.Cover, &group.AdminID, &date, &group.Admin, &group.TotalMembers, &group.Privacy)
+	if err != nil {
+		return group, err
+	}
 	group.CreatedAt = date.Format("2006-01-02 15:04:05")
+	group.TotalPosts, err = GetCountGroupPosts(group_id)
 	return group, err
 }
 

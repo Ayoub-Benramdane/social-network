@@ -1,20 +1,19 @@
 import "../../styles/GroupsPage.css";
 
 export default function EventCard({ event }) {
-  function handleEventSelect(event) {
-    console.log("Interested: ", event);
-  }
+  // function handleEventSelect(event) {
+  //   console.log("Interested: ", event);
+  // }
   return (
     <div className="event-card">
       <div className="event-date">
         <span className="event-day">
-          {new Date(event.day).getDate()}
-          {/* {event.day} */}
         </span>
         <span className="event-month">
-          {new Date(event.day).toLocaleString("default", {
+          {/* <img src={event.image}></img> */}
+          {/* {new Date(event.day).toLocaleString("default", {
             month: "short",
-          })}
+          })} */}
           {/* {event.month} */}
         </span>
       </div>
@@ -83,7 +82,10 @@ export default function EventCard({ event }) {
           })}
           {/* {event.time} */}
         </p>
-        <button className="event-action-btn" onClick={handleEventSelect(event)}>
+        <button
+          className="event-action-btn"
+          // onClick={handleEventSelect(event)}
+        >
           Interested
         </button>
       </div>

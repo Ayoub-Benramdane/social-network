@@ -97,6 +97,24 @@ func GetSuggestedUsers(user_id int64) ([]structs.User, error) {
 	return suggestedUsers, nil
 }
 
+func GetPendingUsers(user_id int64) ([]structs.User, error) {
+	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN invitations i ON u.id = i.invited_id WHERE i.recipient_id = ?", user_id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var pendingUsers []structs.User
+	for rows.Next() {
+		var user structs.User
+		err = rows.Scan(&user.ID, &user.Username, &user.Avatar)
+		if err != nil {
+			return nil, err
+		}
+		pendingUsers = append(pendingUsers, user)
+	}
+	return pendingUsers, nil
+}
+
 func IsFollowed(follower_id, following_id int64) (bool, error) {
 	var count int
 	err := DB.QueryRow("SELECT COUNT(*) FROM follows WHERE follower_id = ? AND following_id = ?", follower_id, following_id).Scan(&count)

@@ -139,7 +139,11 @@ export default function Home() {
             </div>
 
             <div className="right-column">
-              <ProfileCard user={homeData.user} onPostCreated={addNewPost} />
+              <ProfileCard
+                user={homeData.user}
+                onPostCreated={addNewPost}
+                my_groups={homeData.my_groups}
+              />
               <TopGroups groups={homeData.discover_groups} />
             </div>
           </div>

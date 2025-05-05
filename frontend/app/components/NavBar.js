@@ -222,10 +222,8 @@ export default function Navbar({ user }) {
             className={`nav-link ${activeLink === "events" ? "active" : ""}`}
             onClick={() => setActiveLink("events")}
           >
-            <Link href="/events">
             <img src="./icons/events.svg" alt="Events" />
             <span>Events</span>
-            </Link>
           </button>
         </div>
       </div>

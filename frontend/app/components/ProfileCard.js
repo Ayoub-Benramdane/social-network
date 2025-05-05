@@ -1,24 +1,30 @@
 "use client";
 import { useState, useEffect } from "react";
 import "../styles/ProfileCard.css";
-// import GroupsPage from "../groups/page.js";
-// import handleSubmit from "./PostFormModal.js"
-export default function ProfileCard({ user, onPostCreated }) {
+
+import GroupFormModal from "./GroupFromModal";
+import EventFormModal from "./EventFormModal";
+
+export default function ProfileCard({ user, onPostCreated, my_groups }) {
   const [showPostForm, setShowPostForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [groups, setGroups] = useState([]);
 
   function handleCreatePost() {
     setShowPostForm(true);
   }
-  
-  function createGroupHandler() {
+  function handleCreateGroup() {
     setShowGroupForm(true);
   }
-  
-  function createEventHandel() {
-    setShowEventForm(true)
+  function handleCreateEvent() {
+    setShowEventForm(true);
   }
+
+  const handleGroupCreated = (newGroup) => {
+    setGroups((prevGroups) => [newGroup, ...prevGroups]);
+  };
+
   return (
     <div className="profile-card">
       <div className="profile-cover">
@@ -61,17 +67,19 @@ export default function ProfileCard({ user, onPostCreated }) {
             <img src="/icons/create.svg" alt="" />
             <span>Create post</span>
           </button>
-          <button 
-          onClick={createGroupHandler}
-          className="action-btn secondary-button">
+          <button
+            className="action-btn secondary-button"
+            onClick={handleCreateGroup}
+          >
             {/* <img src="/icons/create.svg" alt="" /> */}
             <span>Create group</span>
           </button>
-          <button 
-          onClick={createEventHandel}
-          className="action-btn secondary-button">
+          <button
+            className="action-btn secondary-button"
+            onClick={handleCreateEvent}
+          >
             {/* <img src="/icons/create.svg" alt="" /> */}
-            <span>Create event</span>
+            <span>Create Event</span>
           </button>
         </div>
       </div>
@@ -83,20 +91,18 @@ export default function ProfileCard({ user, onPostCreated }) {
           onPostCreated={onPostCreated}
         />
       )}
-
       {showGroupForm && (
-        <CreateGroupModal
+        <GroupFormModal
           onClose={() => setShowGroupForm(false)}
           user={user}
-          onPostCreated={onPostCreated}
+          onGroupCreated={handleGroupCreated}
         />
       )}
-
       {showEventForm && (
-        <CreateEventModal
+        <EventFormModal
           onClose={() => setShowEventForm(false)}
           user={user}
-          onPostCreated={onPostCreated}
+          my_groups={my_groups}
         />
       )}
     </div>
@@ -465,197 +471,6 @@ function PostFormModal({ onClose, user, onPostCreated }) {
             disabled={isSubmitting}
           >
             {isSubmitting ? "Publishing..." : "Publish Post"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function CreateGroupModal({ onClose }) {
-  const [groupName, setGroupName] = useState("");
-  const [groupDescription, setGroupDescription] = useState("");
-  const [privacy, setPrivacy] = useState("public");
-  const [groupImage, setGroupImage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-
-  // handleSubmit();
-  const createGroupHandler = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    const formData = new FormData();
-    formData.append("name", groupName);
-    formData.append("description", groupDescription);
-    formData.append("privacy", privacy);
-    if (groupImage) formData.append("groupImage", groupImage);
-
-    try {
-      const response = await fetch("http://localhost:8404/new_group", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        alert(errorData.error || "Failed to create group.");
-        return;
-      }
-
-      alert("Group created successfully!");
-      onClose(); 
-    } catch (error) {
-      alert("An error occurred while creating the group.");
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <h3>Create New Group</h3>
-        <form onSubmit={createGroupHandler}>
-          <input
-            type="text"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            placeholder="Group Name"
-            required
-          />
-          <textarea
-            value={groupDescription}
-            onChange={(e) => setGroupDescription(e.target.value)}
-            placeholder="Group Description"
-            rows="4"
-          />
-          <select
-            value={privacy}
-            onChange={(e) => setPrivacy(e.target.value)}
-          >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-          </select>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setGroupImage(e.target.files[0])}
-          />
-          <div className="form-buttons">
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create"}
-            </button>
-            <button type="button" onClick={onClose} className="cancel-btn">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-
-function CreateEventModal({ onClose, groupId, onEventCreated }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [eventImage, setEventImage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("location", location);
-    formData.append("start_date", startDate);
-    formData.append("end_date", endDate);
-    formData.append("group_id", groupId);
-    if (eventImage) {
-      formData.append("eventImage", eventImage);
-    }
-
-    try {
-      const res = await fetch("http://localhost:8404/new_event", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to create event");
-      }
-
-      const createdEvent = await res.json();
-      if (onEventCreated) onEventCreated(createdEvent);
-      onClose();
-    } catch (err) {
-      console.error("Error creating event:", err.message);
-      alert("Error creating event: " + err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal">
-        <div className="modal-header">
-          <h3>Create Event</h3>
-          <button onClick={onClose} className="close-button">&times;</button>
-        </div>
-        <form onSubmit={handleSubmit} className="event-form">
-          <input
-            type="text"
-            placeholder="Event Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-          <textarea
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-          <input
-            type="text"
-            placeholder="Location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            required
-          />
-          <label>Start Date and Time</label>
-          <input
-            type="datetime-local"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-          <label>End Date and Time</label>
-          <input
-            type="datetime-local"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-          <label>Image (optional)</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setEventImage(e.target.files[0])}
-          />
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Event"}
           </button>
         </form>
       </div>

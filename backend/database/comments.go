@@ -36,7 +36,7 @@ func CreateGroupComment(content string, user_id, group_id int64, post structs.Po
 		return 0, err
 	}
 
-	_, err = DB.Exec("UPDATE posts SET total_comments = total_comments + 1 WHERE id = ?", post.ID)
+	_, err = DB.Exec("UPDATE group_posts SET total_comments = total_comments + 1 WHERE id = ?", post.ID)
 	if err != nil {
 		return 0, err
 	}

@@ -18,6 +18,7 @@
   position: relative;
   background-size: cover;
   background-position: center;
+  cursor: pointer;
 }
 .picture-preview {
   position: fixed;
@@ -667,6 +668,47 @@
   width: 14px;
   height: 14px;
   margin-right: 4px;
+}
+.saved-content-container {
+  width: 100%;
+}
+
+.saved-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.saved-tab-button {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.saved-tab-button:hover {
+  color: #333;
+}
+
+.saved-tab-button.active {
+  color: #3555F9;
+  font-weight: 600;
+}
+
+.saved-tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: #3555F9;
+  border-radius: 3px 3px 0 0;
 }
 
 .bookmark-icon {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	structs "social-network/data"
 	"social-network/database"
@@ -9,6 +10,7 @@ import (
 
 func SessionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -16,6 +18,7 @@ func SessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		json.NewEncoder(w).Encode(false)
 		http.SetCookie(w, &http.Cookie{
 			Name:   "session_token",
@@ -30,8 +33,13 @@ func SessionHandler(w http.ResponseWriter, r *http.Request) {
 func GetUserFromSession(r *http.Request) (*structs.User, error) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
+		fmt.Println("Failed to retrieve cookie")
 		return nil, err
 	}
 	user, err := database.GetUserConnected(cookie.Value)
-	return &user, err
+	if err != nil {
+		fmt.Println("Failed to retrieve user")
+		return nil, err
+	}
+	return &user, nil
 }

@@ -200,6 +200,7 @@ func GetPost(user_id, post_id, group_id int64) (structs.Post, error) {
 		return structs.Post{}, err
 	}
 	post.CreatedAt = TimeAgo(date)
+	post.GroupID = group_id
 	post.IsLiked, err = PostGroupIsLiked(post.ID, group_id, user_id)
 	return post, err
 }
@@ -213,6 +214,12 @@ func GetCountUserPosts(id int64) (int64, error) {
 	}
 	err = DB.QueryRow("SELECT COUNT(*) FROM group_posts WHERE user_id = ?", id).Scan(&count2)
 	return count + count2, err
+}
+
+func GetCountGroupPosts(id int64) (int64, error) {
+	var count int64
+	err := DB.QueryRow("SELECT COUNT(*) FROM group_posts WHERE group_id = ?", id).Scan(&count)
+	return count, err
 }
 
 func IsAuthorized(user_id, post_id int64) (bool, error) {

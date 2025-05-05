@@ -13,6 +13,7 @@ import (
 
 func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -21,6 +22,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -33,22 +35,25 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	event.Location = r.FormValue("location")
 	event.GroupID, err = strconv.ParseInt(r.FormValue("group_id"), 10, 64)
 	if err != nil {
+		fmt.Println("Error parsing group ID:", err)
 		response := map[string]string{"error": "Invalid group ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	event.StartDate, err = time.Parse("2006-01-02", r.FormValue("start_date"))
+	event.StartDate, err = time.Parse("2006-01-02T15:04", r.FormValue("start_date"))
 	if err != nil {
+		fmt.Println("Error parsing start date:", err)
 		response := map[string]string{"error": "Invalid start date"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	event.EndDate, err = time.Parse("2006-01-02", r.FormValue("end_date"))
+	event.EndDate, err = time.Parse("2006-01-02T15:04", r.FormValue("end_date"))
 	if err != nil {
+		fmt.Println("Error parsing end date:", err)
 		response := map[string]string{"error": "Invalid end date"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -56,13 +61,15 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := database.GetGroupById(event.GroupID); err != nil {
+		fmt.Println("Error retrieving group:", err)
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
-	if member, err := database.IsMemberGroup(user.ID, event.GroupID); err != nil || !member {
+	if member, err := database.IsMemberGroup(event.GroupID, user.ID); err != nil || !member {
+		fmt.Println("User is not a member of the group")
 		response := map[string]string{"error": "User is not a member of the group"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -71,6 +78,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	errors, valid := ValidateEvent(event.Name, event.Description, event.Location, event.StartDate, event.EndDate)
 	if !valid {
+		fmt.Println("Validation error", errors)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error":  "Validation error",
@@ -82,6 +90,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	var imagePath string
 	image, header, err := r.FormFile("groupImage")
 	if err != nil && err.Error() != "http: no such file" {
+		fmt.Println("Error retrieving image:", err)
 		response := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -91,6 +100,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	if image != nil {
 		imagePath, err = SaveImage(image, header, "../frontend/public/events/")
 		if err != nil {
+			fmt.Println("Error saving image:", err)
 			response := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
@@ -104,6 +114,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := database.CreateEvent(user.ID, event.Name, event.Description, event.Location, event.StartDate, event.EndDate, event.GroupID, imagePath)
 	if err != nil {
+		fmt.Println("Error creating event:", err)
 		response := map[string]string{"error": "Failed to create event"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -128,6 +139,7 @@ func CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -136,6 +148,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -144,6 +157,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
 	if err != nil {
+		fmt.Println("Error parsing group ID:", err)
 		response := map[string]string{"error": "Invalid group ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -152,6 +166,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	event_id, err := strconv.ParseInt(r.URL.Query().Get("event_id"), 10, 64)
 	if err != nil {
+		fmt.Println("Error parsing event ID:", err)
 		response := map[string]string{"error": "Invalid event ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -160,6 +175,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = database.GetGroupById(group_id)
 	if err != nil {
+		fmt.Println("Error retrieving group:", err)
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -167,12 +183,8 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	member, err := database.IsMemberGroup(user.ID, group_id)
-	if err != nil {
-		response := map[string]string{"error": "Failed to check if user is a member"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	} else if !member {
+	if err != nil || !member {
+		fmt.Println("User is not a member of the group")
 		response := map[string]string{"error": "User is not a member of the group"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -181,6 +193,7 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 
 	event, err := database.GetEvent(event_id)
 	if err != nil {
+		fmt.Println("Error retrieving event:", err)
 		response := map[string]string{"error": "Failed to retrieve event"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -192,8 +205,8 @@ func GetEventHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetEventsHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("aaaaaaaa")
 	if r.Method != http.MethodGet {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -202,6 +215,7 @@ func GetEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -210,7 +224,7 @@ func GetEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	events, err := database.GetEvents(user.ID)
 	if err != nil {
-		fmt.Println("Returning events:", events)
+		fmt.Println("Error retrieving events:", err)
 		response := map[string]string{"error": "Failed to retrieve events"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -220,6 +234,7 @@ func GetEventsHandler(w http.ResponseWriter, r *http.Request) {
 	for i := range events {
 		member, err := database.IsMemberGroup(user.ID, events[i].GroupID)
 		if err != nil {
+			fmt.Println("Error checking if user is a member:", err)
 			response := map[string]string{"error": "Failed to check if user is a member"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)

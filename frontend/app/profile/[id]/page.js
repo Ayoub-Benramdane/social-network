@@ -13,9 +13,9 @@ export default function ProfilePage() {
 
   const [savedPosts, setSavedPosts] = useState([]);
   const [isLoadingSavedPosts, setIsLoadingSavedPosts] = useState(false);
-  const [picturePreview, setPicturePreview] = useState(false);
+  const [picturePreview, setPicturePreview] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [isOwnProfile, setIsOwnProfile] = useState(null);
   const [userPosts, setUserPosts] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
@@ -25,12 +25,16 @@ export default function ProfilePage() {
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [error, setError] = useState(null);
+  const [activeSubTab, setActiveSubTab] = useState("posts");
+  const [savedGroupPosts, setSavedGroupPosts] = useState([]);
+  const [isLoadingSavedGroupPosts, setIsLoadingSavedGroupPosts] =
+    useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const router = useRouter();
   console.log("Welcome:", id);
 
-  function togglePicPreview() {
-    setPicturePreview(!picturePreview);
+  function togglePicPreview(type = null) {
+    setPicturePreview(type);
   }
   async function fetchSavedPosts() {
     try {
@@ -122,6 +126,7 @@ export default function ProfilePage() {
           setIsLoadingSavedPosts(true);
           setUserData(data);
           setUserPosts(data.Posts || []);
+          setIsOwnProfile(data.ProfileInfo.role === "owner" || false);
         } else {
           setError("Failed to fetch user data");
         }
@@ -344,19 +349,30 @@ export default function ProfilePage() {
         </button>
 
         <div className="profile-header">
+          {/* Preview (shown if avatar or cover is clicked) */}
           {picturePreview && (
-            <div className="picture-preview">
+            <div
+              className="picture-preview"
+              onClick={() => togglePicPreview(null)}
+            >
               <img
-                src={userData.ProfileInfo.cover}
-                alt="Cover"
+                src={
+                  picturePreview === "cover"
+                    ? userData.ProfileInfo.cover
+                    : userData.ProfileInfo.avatar || "./inconnu/avatar.png"
+                }
+                alt={picturePreview}
                 className="cover-preview"
-                // style={{ width: "100%", height: "100%" }}
               />
-              <button className="close-preview" onClick={togglePicPreview}>
+              <button
+                className="close-preview"
+                onClick={() => togglePicPreview(null)}
+              >
                 &times;
               </button>
             </div>
           )}
+
           <div
             className="profile-cover"
             style={{
@@ -364,11 +380,14 @@ export default function ProfilePage() {
                 ? `url(${userData.ProfileInfo.cover})`
                 : "linear-gradient(135deg, #3555F9 0%, #6687FF 100%)",
             }}
-            onClick={togglePicPreview}
+            onClick={() => togglePicPreview("cover")}
           >
             <div
               className="profile-avatar-container"
-              onClick={togglePicPreview}
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePicPreview("avatar");
+              }}
             >
               <img
                 src={userData.ProfileInfo.avatar || "./inconnu/avatar.png"}
@@ -588,107 +607,82 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-            {activeTab === "saved" &&
-              isOwnProfile &&
-              (isLoadingSavedPosts ? (
-                <div className="loading-tab">
-                  <div className="loading-spinner"></div>
-                  <p>Loading saved posts...</p>
-                </div>
-              ) : savedPosts.length > 0 ? (
-                <div className="posts-container">
-                  {savedPosts.map((post) => (
-                    <PostsComponent key={post.id} post={post} />
-                    // <div
-                    //   key={post.id}
-                    //   className="post-card"
-                    //   style={{ position: "relative" }}
-                    // >
-                    //   <div className="bookmark-icon">
-                    //     <img
-                    //       // src="/icons/bookmark-filled.svg"
-                    //       alt="Saved"
-                    //       width="18"
-                    //       height="18"
-                    //     />
-                    //   </div>
-
-                    //   <div className="header">
-                    //     <div className="post-header">
-                    //       <img
-                    //         src={post.author_avatar || "./inconnu/avatar.png"}
-                    //         // alt={post.author}
-                    //         className="author-avatar"
-                    //       />
-                    //       <div className="author-info">
-                    //         <h4 className="author-name">{post.author}</h4>
-                    //         <div className="timestamp">
-                    //           <img
-                    //             src="./icons/created_at.svg"
-                    //             alt="Created at"
-                    //           />
-                    //           <p
-                    //             className="post-time"
-                    //             style={{ color: "#B8C3E1", fontSize: "12px" }}
-                    //           >
-                    //             {post.created_at}
-                    //           </p>
-                    //         </div>
-                    //       </div>
-                    //     </div>
-                    //     <div className="post-privacy">
-                    //       <img
-                    //         src={`./icons/${post.privacy}.svg`}
-                    //         width={"32px"}
-                    //         height={"32px"}
-                    //         alt={post.privacy}
-                    //         className="privacy-icon"
-                    //       />
-                    //     </div>
-                    //   </div>
-
-                    //   <div className="post-content">
-                    //     <h3 className="post-title">{post.title}</h3>
-                    //     <p className="post-text">{post.content}</p>
-                    //     {post.image && (
-                    //       <img
-                    //         src={post.image}
-                    //         alt={post.title}
-                    //         className="post-image"
-                    //       />
-                    //     )}
-                    //     <div className="post-category">{post.category}</div>
-                    //   </div>
-                    //   <div className="post-actions">
-                    //     <div
-                    //       className="action-like"
-                    //       onClick={() => handleLike(post.id)}
-                    //     >
-                    //       <img src="/icons/like.svg" alt="Like" />
-                    //       <p>{post.total_likes} Likes</p>
-                    //     </div>
-                    //     <div className="action-comment">
-                    //       <img src="/icons/comment.svg" alt="Comment" />
-                    //       <p>{post.total_comments} Comments</p>
-                    //     </div>
-                    //   </div>
-                    //   <p className="see-post-link">See post &rarr;</p>
-                    // </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <div className="empty-state-icon bookmark">🔖</div>
-                  <h3 className="empty-state-title">No saved posts yet</h3>
-                  <p className="empty-state-text">
-                    When you save posts you like, they will appear here for
-                    quick access later.
-                  </p>
-                  <button className="create-post-button" onClick={goToHome}>
-                    Browse Posts
+            {activeTab === "saved" && isOwnProfile && (
+              <div className="saved-content-container">
+                <div className="saved-tabs">
+                  <button
+                    className={`saved-tab-button ${
+                      activeSubTab === "posts" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveSubTab("posts")}
+                  >
+                    Saved Posts
+                  </button>
+                  <button
+                    className={`saved-tab-button ${
+                      activeSubTab === "group-posts" ? "active" : ""
+                    }`}
+                    onClick={() => setActiveSubTab("group-posts")}
+                  >
+                    Saved Group Posts
                   </button>
                 </div>
-              ))}
+
+                {activeSubTab === "posts" &&
+                  (isLoadingSavedPosts ? (
+                    <div className="loading-tab">
+                      <div className="loading-spinner"></div>
+                      <p>Loading saved posts...</p>
+                    </div>
+                  ) : savedPosts.length > 0 ? (
+                    <div className="posts-container">
+                      {savedPosts.map((post) => (
+                        <PostsComponent key={post.id} post={post} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <div className="empty-state-icon bookmark">🔖</div>
+                      <h3 className="empty-state-title">No saved posts yet</h3>
+                      <p className="empty-state-text">
+                        When you save posts you like, they will appear here for
+                        quick access later.
+                      </p>
+                      <button className="create-post-button" onClick={goToHome}>
+                        Browse Posts
+                      </button>
+                    </div>
+                  ))}
+
+                {activeSubTab === "group-posts" &&
+                  (isLoadingSavedGroupPosts ? (
+                    <div className="loading-tab">
+                      <div className="loading-spinner"></div>
+                      <p>Loading saved group posts...</p>
+                    </div>
+                  ) : savedGroupPosts.length > 0 ? (
+                    <div className="posts-container">
+                      {savedGroupPosts.map((post) => (
+                        <PostsComponent key={post.id} post={post} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <div className="empty-state-icon bookmark">👥🔖</div>
+                      <h3 className="empty-state-title">
+                        No saved group posts yet
+                      </h3>
+                      <p className="empty-state-text">
+                        When you save posts from groups, they will appear here
+                        for quick access later.
+                      </p>
+                      <button className="create-post-button" onClick={goToHome}>
+                        Browse Groups
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
 
             {activeTab === "followers" &&
               (isLoadingFollowers ? (

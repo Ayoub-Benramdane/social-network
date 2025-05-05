@@ -127,7 +127,6 @@ export default function PostPage() {
         throw new Error("Failed to like post");
       }
 
-      // Update the total likes count
       if (response.ok) {
         const updatedPost = await response.json();
         setPost({
@@ -187,17 +186,9 @@ export default function PostPage() {
       </div>
     );
   }
-  
-  const currentUser = {
-    first_name: "Mohammed Amine",
-    last_name: "Dinani",
-    avatar: "./avatars/thorfinn-vinland-saga-episode-23-1.png",
-    username: "mdinani",
-  };
-  
+
   return (
     <div className="post-page-container">
-       <Navbar user={currentUser} />
       <button onClick={goToHome} className="retry-button">
         Go to Home
       </button>
@@ -255,7 +246,75 @@ export default function PostPage() {
               <p>{post.total_comments} Comments</p>
             </div>
           </div>
+          <form className="comment-form" onSubmit={handleCommentSubmit}>
+            <textarea
+              className="comment-input"
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              rows={3}
+            />
 
+            <div className="file-input-container">
+              <label className="file-input-label">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  viewBox="0 0 22 22"
+                >
+                  <path
+                    fill="#3555F9"
+                    d="M1.67 18.7a.746.746 0 0 1-.41-1.37l4.93-3.31c1.08-.73 2.57-.64 3.55.19l.33.29c.5.43 1.35.43 1.84 0l4.16-3.57c1.06-.91 2.73-.91 3.8 0l1.63 1.4c.31.27.35.74.08 1.06-.27.31-.74.35-1.06.08l-1.63-1.4c-.5-.43-1.35-.43-1.85 0l-4.16 3.57c-1.06.91-2.73.91-3.8 0l-.33-.29c-.46-.39-1.22-.43-1.73-.08l-4.93 3.31c-.13.08-.28.12-.42.12M8 9.75C6.48 9.75 5.25 8.52 5.25 7S6.48 4.25 8 4.25 10.75 5.48 10.75 7 9.52 9.75 8 9.75m0-4a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5"
+                  ></path>
+                  <path
+                    fill="#3555F9"
+                    d="M14 21.75H8C2.57 21.75.25 19.43.25 14V8C.25 2.57 2.57.25 8 .25h6c5.43 0 7.75 2.32 7.75 7.75v6c0 5.43-2.32 7.75-7.75 7.75m-6-20C3.39 1.75 1.75 3.39 1.75 8v6c0 4.61 1.64 6.25 6.25 6.25h6c4.61 0 6.25-1.64 6.25-6.25V8c0-4.61-1.64-6.25-6.25-6.25z"
+                  ></path>
+                </svg>
+                Add Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setGroupImage(e.target.files[0])}
+                  className="file-input"
+                />
+              </label>
+            </div>
+
+            {groupImage && (
+              <div className="image-preview">
+                <img
+                  src={URL.createObjectURL(groupImage)}
+                  alt="Preview"
+                  className="preview-image"
+                />
+                <span
+                  className="remove-image"
+                  onClick={() => setGroupImage(null)}
+                >
+                  ×
+                </span>
+              </div>
+            )}
+
+            <button type="submit" className="comment-submit-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                fill="none"
+                viewBox="0 0 18 18"
+              >
+                <path
+                  fill="#fff"
+                  d="M15.07 5.51 6.51 1.23C.76-1.65-1.6.71 1.28 6.46l.87 1.74c.25.51.25 1.1 0 1.61l-.87 1.73c-2.88 5.75-.53 8.11 5.23 5.23l8.56-4.28c3.84-1.92 3.84-5.06 0-6.98m-3.23 4.24h-5.4c-.41 0-.75-.34-.75-.75s.34-.75.75-.75h5.4c.41 0 .75.34.75.75s-.34.75-.75.75"
+                ></path>
+              </svg>
+              Comment
+            </button>
+          </form>
           <div className="post-comments-section">
             <h3 className="comments-title">Comments</h3>
 
@@ -271,7 +330,7 @@ export default function PostPage() {
                     <div key={key} className="comment-item">
                       <div className="comment-header">
                         <img
-                          src="avatar.jpg"
+                          src={comment.avatar}
                           alt={comment.author}
                           className="comment-avatar"
                         />
@@ -297,31 +356,6 @@ export default function PostPage() {
                 </p>
               )}
             </div>
-
-            <form className="comment-form" onSubmit={handleCommentSubmit}>
-              <textarea
-                className="comment-input"
-                placeholder="Write a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                rows={3}
-              />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setGroupImage(e.target.files[0])}
-              />
-              {groupImage && (
-                <img
-                  src={URL.createObjectURL(groupImage)}
-                  alt="Preview"
-                  style={{ width: 100, marginTop: 10 }}
-                />
-              )}
-              <button type="submit" className="comment-submit-btn">
-                Post Comment
-              </button>
-            </form>
           </div>
         </div>
 

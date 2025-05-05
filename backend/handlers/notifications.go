@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"social-network/database"
@@ -9,6 +10,7 @@ import (
 
 func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -17,6 +19,7 @@ func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -25,6 +28,7 @@ func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	notifications, err := database.GetNotifications(user.ID)
 	if err != nil {
+		fmt.Println("Failed to retrieve notifications:", err)
 		response := map[string]string{"error": "Failed to retrieve notifications"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -37,6 +41,7 @@ func NotificationsHandler(w http.ResponseWriter, r *http.Request) {
 
 func MarkNotificationsAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		fmt.Println("Method not allowed")
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -45,6 +50,7 @@ func MarkNotificationsAsReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
+		fmt.Println("Failed to retrieve user")
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -52,6 +58,7 @@ func MarkNotificationsAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if database.MarkAllNotificationsAsRead(user.ID) != nil {
+		fmt.Println("Failed to mark notifications as read")
 		response := map[string]string{"error": "Failed to mark notifications as read"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)

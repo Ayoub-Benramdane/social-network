@@ -29,7 +29,7 @@ const UserCard = ({ user, isActive, onClick }) => {
       onClick={onClick}
     >
       <img
-        src={user.avatar}
+        src={user.avatar || user.image}
         className="user-avatar"
         alt={user.username || user.name}
       />
@@ -62,80 +62,43 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
+  const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
 
-  const [users] = useState([
-    {
-      id: 1,
-      first_name: "John",
-      last_name: "Doe",
-      username: "johndoe",
-      avatar: "./avatars/user1.jpg",
-      unread_count: 3,
-    },
-    {
-      id: 2,
-      first_name: "Jane",
-      last_name: "Smith",
-      username: "janesmith",
-      avatar: "./avatars/user2.jpg",
-      unread_count: 1,
-    },
-    {
-      id: 3,
-      first_name: "Michael",
-      last_name: "Johnson",
-      username: "michaelj",
-      avatar: "./avatars/user3.jpg",
-      unread_count: 0,
-    },
-    {
-      id: 4,
-      first_name: "Emily",
-      last_name: "Williams",
-      username: "emilyw",
-      avatar: "./avatars/user4.jpg",
-      unread_count: 5,
-    },
-    {
-      id: 5,
-      first_name: "David",
-      last_name: "Brown",
-      username: "davidb",
-      avatar: "./avatars/user5.jpg",
-      unread_count: 2,
-    },
-  ]);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("http://localhost:8404/connections", {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
 
-  const [groups] = useState([
-    {
-      id: 101,
-      name: "Web Development",
-      image: "./avatars/group1.jpg",
-      total_members: 24,
-      unread_count: 7,
-    },
-    {
-      id: 102,
-      name: "UI/UX Design",
-      image: "./avatars/group2.jpg",
-      total_members: 18,
-      unread_count: 3,
-    },
-    {
-      id: 103,
-      name: "JavaScript Enthusiasts",
-      image: "./avatars/group3.jpg",
-      total_members: 32,
-      unread_count: 0,
-    },
-    {
-      id: 104,
-      name: "React Developers",
-      image: "./avatars/group4.jpg",
-      total_members: 45,
-      unread_count: 12,
-    },
-  ]);
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:8404/groups?type=joined",
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+        const data = await response.json();
+        setGroups(data);
+      } catch (error) {
+        console.error("Error fetching groups:", error);
+      }
+    };
+    fetchGroups();
+  }, []);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -143,103 +106,31 @@ export default function MessagesPage() {
     }
   }, [messages]);
 
-  //   useEffect(() => {
-  //     if (users.length > 0 && !selectedUser) {
-  //       setSelectedUser(users[0]);
-  //       const initialMessages = [
-  //         {
-  //           id: 1,
-  //           content: "Hey there! How are you doing?",
-  //           username: users[0].username,
-  //           created_at: "10:30 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //         {
-  //           id: 2,
-  //           content: "I'm good, thanks for asking! How about you?",
-  //           username: "me",
-  //           created_at: "10:32 AM",
-  //           avatar: "./avatars/me.jpg",
-  //         },
-  //         {
-  //           id: 3,
-  //           content:
-  //             "I'm doing well too. Just working on some new features for the app.",
-  //           username: users[0].username,
-  //           created_at: "10:35 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //         {
-  //           id: 4,
-  //           content:
-  //             "That sounds interesting! What kind of features are you working on?",
-  //           username: "me",
-  //           created_at: "10:37 AM",
-  //           avatar: "./avatars/me.jpg",
-  //         },
-  //         {
-  //           id: 5,
-  //           content:
-  //             "I'm implementing a new messaging system with real-time updates.",
-  //           username: users[0].username,
-  //           created_at: "10:40 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //       ];
-  //       setMessages(initialMessages);
-  //     }
-  //   }, [users]);
-
-  const handleUserSelect = (user) => {
+  const handleUserSelect = (user, isGroup) => {
     setSelectedUser(user);
-
-    const userMessages = [
-      {
-        id: 1,
-        content: `Hi there! This is a conversation with ${
-          user.first_name || user.name
-        }.`,
-        username: user.username || user.name,
-        created_at: "09:15 AM",
-        avatar: user.avatar || user.image,
-      },
-      {
-        id: 2,
-        content: "Hello! How can I help you today?",
-        username: "me",
-        created_at: "09:17 AM",
-        avatar: "./avatars/me.jpg",
-      },
-      {
-        id: 3,
-        content: "I wanted to discuss the latest project updates.",
-        username: user.username || user.name,
-        created_at: "09:20 AM",
-        avatar: user.avatar || user.image,
-      },
-      {
-        id: 4,
-        content: "Sure, I've been working on the new UI components.",
-        username: "me",
-        created_at: "09:22 AM",
-        avatar: "./avatars/me.jpg",
-      },
-      {
-        id: 5,
-        content: "That's great! Can you share some screenshots?",
-        username: user.username || user.name,
-        created_at: "09:25 AM",
-        avatar: user.avatar || user.image,
-      },
-    ];
-
-    setMessages(userMessages);
+    let fetchMessages;
+    if (isGroup === "group") {
+      fetchMessages = `id=0&group_id=${user.id}`;
+    } else {
+      fetchMessages = `id=${user.id}&group_id=0`;
+    }
+    fetch(`http://localhost:8404/chats?${fetchMessages}`, {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setMessages(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching messages:", error);
+        setMessages([]);
+      });
   };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
-
     const message = {
       id: Date.now(),
       content: newMessage,
@@ -308,7 +199,7 @@ export default function MessagesPage() {
                       key={user.id}
                       user={user}
                       isActive={selectedUser && selectedUser.id === user.id}
-                      onClick={() => handleUserSelect(user)}
+                      onClick={() => handleUserSelect(user, "user")}
                     />
                   ))
                 : groups.map((group) => (
@@ -316,7 +207,7 @@ export default function MessagesPage() {
                       key={group.id}
                       user={group}
                       isActive={selectedUser && selectedUser.id === group.id}
-                      onClick={() => handleUserSelect(group)}
+                      onClick={() => handleUserSelect(group, "group")}
                     />
                   ))}
             </ul>

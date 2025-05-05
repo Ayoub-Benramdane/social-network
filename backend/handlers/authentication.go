@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -125,6 +126,15 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	register.ID, err = strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if err != nil {
+		fmt.Println("Error parsing ID:", err)
+		response := map[string]string{"error": "Error Parsing ID"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	register.Username = r.FormValue("username")
 	register.FirstName = r.FormValue("firstName")
 	register.LastName = r.FormValue("lastName")
@@ -133,7 +143,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	register.ConfirmPass = r.FormValue("confirmedPassword")
 	register.Bio = r.FormValue("aboutMe")
 	register.Privacy = r.FormValue("privacy")
-
+	register.Type = r.FormValue("type")
 	temp := r.FormValue("dateOfBirth")
 	register.DateOfBirth, err = time.Parse("2006-01-02", temp)
 	if err != nil {
@@ -152,24 +162,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			"error":  "Validation error",
 			"fields": errors,
 		})
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
-	if err != nil {
-		fmt.Println("Error hashing password:", err)
-		response := map[string]string{"error": "Error hashing password"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	sessionToken, err := uuid.NewV4()
-	if err != nil {
-		log.Printf("Error generating session token: %v", err)
-		response := map[string]string{"error": "Failed to generate session token"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
 		return
 	}
 
@@ -219,25 +211,64 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		coverPath = "/inconnu/cover.jpg"
 	}
 
-	if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
-			fmt.Println("Error inserting user:", err)
-			response := map[string]string{"error": "Email already exists"}
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(response)
-		} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
-			fmt.Println("Error inserting user:", err)
-			response := map[string]string{"error": "Username already exists"}
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(response)
-		} else {
-			fmt.Println("Error inserting user:", err)
-			log.Printf("Error inserting user: %v", err)
-			response := map[string]string{"error": "Registration failed"}
+	if register.Type == "update" {
+		if err := database.UpdateProfile(register.ID, register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, register.DateOfBirth); err != nil {
+			if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
+				fmt.Println("Email already exists")
+				response := map[string]string{"error": "Email already exists"}
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(response)
+			} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
+				fmt.Println("Username already exists")
+				response := map[string]string{"error": "Username already exists"}
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(response)
+			} else {
+				log.Printf("Error inserting user: %v", err)
+				response := map[string]string{"error": "Registration failed"}
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(response)
+			}
+			return
+		}
+	} else if register.Type == "register" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
+		if err != nil {
+			fmt.Println("Error hashing password:", err)
+			response := map[string]string{"error": "Error hashing password"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
+			return
 		}
-		return
+
+		sessionToken, err := uuid.NewV4()
+		if err != nil {
+			log.Printf("Error generating session token: %v", err)
+			response := map[string]string{"error": "Failed to generate session token"}
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
+		if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+			if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
+				fmt.Println("Email already exists")
+				response := map[string]string{"error": "Email already exists"}
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(response)
+			} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
+				fmt.Println("Username already exists")
+				response := map[string]string{"error": "Username already exists"}
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(response)
+			} else {
+				log.Printf("Error inserting user: %v", err)
+				response := map[string]string{"error": "Registration failed"}
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(response)
+			}
+			return
+		}
 	}
 
 	response := map[string]string{"message": "Registration successful! Please log in."}
@@ -264,7 +295,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := database.DeleteSession(user.ID); err != nil {
-		fmt.Println("Error deleting session:", err)
 		log.Printf("Error deleting session: %v", err)
 		response := map[string]string{"error": "Failed to delete session"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -292,7 +322,6 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 	const maxNameLength = 20
 	const maxAboutMe = 100
 
-	// ✅ Validation de l'email
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if len(email) == 0 {
 		errors["email"] = "Email cannot be empty"
@@ -302,7 +331,6 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 		errors["email"] = "Invalid email format"
 	}
 
-	// ✅ Validation du mot de passe
 	if password != confirm_pass && username != "" {
 		errors["password"] = "Passwords do not match"
 	} else if len(password) < 8 {
@@ -327,7 +355,6 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 	}
 
 	if username != "" {
-		// ✅ Validation du prénom
 		if len(firstName) == 0 {
 			errors["first_name"] = "First name cannot be empty"
 		} else if len(firstName) > maxNameLength {
@@ -336,7 +363,6 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 			errors["first_name"] = "First name must contain only letters"
 		}
 
-		// ✅ Validation du nom
 		if len(lastName) == 0 {
 			errors["last_name"] = "Last name cannot be empty"
 		} else if len(lastName) > maxNameLength {
@@ -345,14 +371,12 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 			errors["last_name"] = "Last name must contain only letters"
 		}
 
-		// ✅ Validation du username
 		if len(username) == 0 {
 			errors["username"] = "Username cannot be empty"
 		} else if len(username) > maxUsername {
 			errors["username"] = fmt.Sprintf("Username cannot be longer than %d characters.", maxUsername)
 		}
 
-		// ✅ Validation de la date
 		if date.IsZero() {
 			errors["date"] = "Date cannot be empty"
 		} else {
@@ -365,20 +389,16 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 				errors["date"] = "Date cannot be before the year 1900"
 			}
 		}
-		// ✅ Validation de la description
-		if len(aboutMe) == 0 {
-			errors["about_me"] = "About Me cannot be empty"
-		} else if len(aboutMe) > maxAboutMe {
+
+		if len(aboutMe) > maxAboutMe {
 			errors["about_me"] = fmt.Sprintf("About me cannot be longer than %d characters.", maxAboutMe)
 		}
 
-		// ✅ Validation de la privacy
 		if privacy != "public" && privacy != "private" {
 			errors["privacy"] = "Privacy must be either 'public' or 'private'"
 		}
 	}
 
-	// Retour des erreurs
 	if len(errors) > 0 {
 		log.Println(errors)
 		return errors, false
@@ -386,7 +406,6 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 	return nil, true
 }
 
-// 🔍 Fonction pour vérifier si un string contient uniquement des lettres
 func isAlphabetic(s string) bool {
 	for _, char := range s {
 		if !unicode.IsLetter(char) && char != ' ' {

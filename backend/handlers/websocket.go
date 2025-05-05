@@ -87,7 +87,7 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		var message structs.Message
 		message.Type = r.FormValue("type")
-		message.ReceiverID, err = strconv.ParseInt(r.FormValue("receiver_id"), 10, 64)
+		message.UserID, err = strconv.ParseInt(r.FormValue("receiver_id"), 10, 64)
 		if err != nil {
 			fmt.Println(err)
 			response := map[string]string{"error": "Invalid receiver ID"}
@@ -120,27 +120,27 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if message.Type == "message" {
-			if (message.Content == "" || message.Image == "") && (message.ReceiverID == 0 || message.GroupID == 0) {
+			if (message.Content == "" || message.Image == "") && (message.UserID == 0 || message.GroupID == 0) {
 				response := map[string]string{"error": "Message content and image cannot be empty"}
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(response)
 				return
 			}
-			if message.ReceiverID != 0 {
-				if _, err := database.GetUserById(message.ReceiverID); err != nil {
+			if message.UserID != 0 {
+				if _, err := database.GetUserById(message.UserID); err != nil {
 					respose := map[string]string{"error": "Failed to retrieve user"}
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(respose)
 					return
 				}
-				if database.SendMessage(user.ID, message.ReceiverID, 0, message.Content, imagePath) != nil {
+				if database.SendMessage(user.ID, message.UserID, 0, message.Content, imagePath) != nil {
 					response := map[string]string{"error": "Failed to send message"}
 					w.WriteHeader(http.StatusInternalServerError)
 					json.NewEncoder(w).Encode(response)
 					return
 				}
 
-				SendWsMessage(message.ReceiverID, map[string]interface{}{"type": "message", "id": user.ID, "username": user.Username, "content": message.Content, "image": imagePath})
+				SendWsMessage(message.UserID, map[string]interface{}{"type": "message", "id": user.ID, "username": user.Username, "content": message.Content, "image": imagePath})
 
 			} else if message.GroupID != 0 {
 				if _, err := database.GetGroupById(message.GroupID); err != nil {
@@ -159,14 +159,14 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 				SendWsMessage(message.GroupID, map[string]interface{}{"type": "message", "id": user.ID, "username": user.Username, "content": message.Content, "image": imagePath})
 			}
 		} else if message.Type == "typing" {
-			if message.ReceiverID != 0 {
-				SendWsMessage(message.ReceiverID, map[string]interface{}{"type": "typing", "id": user.ID, "username": user.Username})
+			if message.UserID != 0 {
+				SendWsMessage(message.UserID, map[string]interface{}{"type": "typing", "id": user.ID, "username": user.Username})
 			} else if message.GroupID != 0 {
 				SendWsMessage(message.GroupID, map[string]interface{}{"type": "typing", "id": user.ID, "username": user.Username})
 			}
 		} else if message.Type == "notification" {
-			if message.ReceiverID != 0 {
-				SendWsMessage(message.ReceiverID, map[string]interface{}{"type": "notification", "id": user.ID, "username": user.Username, "content": message.Content})
+			if message.UserID != 0 {
+				SendWsMessage(message.UserID, map[string]interface{}{"type": "notification", "id": user.ID, "username": user.Username, "content": message.Content})
 			} else if message.GroupID != 0 {
 				SendWsMessage(message.GroupID, map[string]interface{}{"type": "notification", "id": user.ID, "username": user.Username, "content": message.Content})
 			}
