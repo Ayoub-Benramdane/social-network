@@ -31,8 +31,8 @@ export default function TopGroups({ groups }) {
       </div>
 
       <ul className="group-list">
-        {groups.map((group) => (
-          <li key={group.id} className="group-item">
+        {groups?.map((group) => (
+          <li key={group.group_id} className="group-item">
             <div className="group-image">
               <img
                 src={group.image || "/images/default-group.png"}
@@ -57,7 +57,7 @@ export default function TopGroups({ groups }) {
         ))}
       </ul>
 
-      {groups.length === 0 && (
+      {groups?.length === 0 && (
         <div className="empty-state">
           <p>No groups available</p>
         </div>

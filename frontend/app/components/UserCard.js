@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 export default function UserCard({ user, action, onClick }) {
+  const [isFollowing, setIsFollowing] = useState();
   async function handleFollow(user_id) {
     // console.log(`Following user with ID: ${userId}`);
     try {
@@ -49,8 +52,15 @@ export default function UserCard({ user, action, onClick }) {
         </div>
 
         {action === "follow" && (
-          <button className="follow-btn" onClick={() => handleFollow(user.id)}>
-            Follow
+          <button
+            className="follow-btn"
+            onClick={() => {
+              setIsFollowing(!isFollowing);
+              handleFollow(user.user_id);
+            }}
+          >
+            {!isFollowing ? "Follow" : "Following"}
+            {/* Follow */}
           </button>
         )}
       </div>

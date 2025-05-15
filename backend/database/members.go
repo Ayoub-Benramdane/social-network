@@ -7,7 +7,7 @@ func JoinGroup(user_id, group_id int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = DB.Exec("UPDATE groups SET total_members = total_members + 1 WHERE id = ?", group_id)
+	_, err = DB.Exec("UPDATE groups SET members = members + 1 WHERE id = ?", group_id)
 	return err
 }
 
@@ -16,7 +16,7 @@ func LeaveGroup(user_id, group_id int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = DB.Exec("UPDATE groups SET total_members = total_members - 1 WHERE id = ?", group_id)
+	_, err = DB.Exec("UPDATE groups SET members = members - 1 WHERE id = ?", group_id)
 	return err
 }
 
@@ -26,9 +26,9 @@ func IsMemberGroup(group_id, user_id int64) (bool, error) {
 	return count > 0, err
 }
 
-func GetGroupMembers(group_id int64) ([]structs.User, error) {
+func GetGroupMembers(group_id, offset int64) ([]structs.User, error) {
 	var members []structs.User
-	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = ?", group_id)
+	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = ? LIMIT ? OFFSET ?", group_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}

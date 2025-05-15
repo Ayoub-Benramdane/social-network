@@ -13,7 +13,7 @@ import (
 
 func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		fmt.Println("Method not allowed")
+		fmt.Println("Method not allowed", r.Method)
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -22,7 +22,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
-		fmt.Println("Failed to retrieve user")
+		fmt.Println("Failed to retrieve user", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -90,9 +90,14 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		coverPath = "/inconnu/cover.jpg"
 	}
-
 	id_group, err := database.CreateGroup(user.ID, group.Name, group.Description, imagePath, coverPath, group.Privacy)
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "UNIQUE constraint") {
+		fmt.Println("Group name already exists")
+		response := map[string]string{"error": "Group name already exists"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	} else if err != nil {
 		fmt.Println("Failed to create group:", err)
 		response := map[string]string{"error": "Failed to create group"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -123,7 +128,7 @@ func CreateGrpoupHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		fmt.Println("Method not allowed")
+		fmt.Println("Method not allowed", r.Method)
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -132,7 +137,7 @@ func GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
-		fmt.Println("Failed to retrieve user")
+		fmt.Println("Failed to retrieve user", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -140,14 +145,23 @@ func GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Type := r.URL.Query().Get("type")
+	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
+	if err != nil {
+		fmt.Println("Error parsing offset:", err)
+		response := map[string]string{"error": "Invalid offset"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	var groups []structs.Group
 
 	if Type == "suggested" {
-		groups, err = database.GetSuggestedGroups(user.ID)
+		groups, err = database.GetSuggestedGroups(user.ID, offset)
 	} else if Type == "pending" {
-		groups, err = database.GetPendingGroups(user.ID)
+		groups, err = database.GetPendingGroups(user.ID, offset)
 	} else if Type == "joined" {
-		groups, err = database.GetGroups(user.ID)
+		groups, err = database.GetGroups(user.ID, offset)
 	} else {
 		fmt.Println("Invalid type groups")
 		response := map[string]string{"error": "Invalid type groups"}
@@ -169,7 +183,7 @@ func GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 
 func GroupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		fmt.Println("Method not allowed")
+		fmt.Println("Method not allowed", r.Method)
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -178,7 +192,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
-		fmt.Println("Failed to retrieve user")
+		fmt.Println("Failed to retrieve user", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -187,7 +201,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
 	if err != nil {
-		fmt.Println("Invalid group ID")
+		fmt.Println("Invalid group ID", err)
 		response := map[string]string{"error": "Invalid group ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -196,7 +210,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	group, err := database.GetGroupById(group_id)
 	if err != nil {
-		fmt.Println("Failed to retrieve group")
+		fmt.Println("Failed to retrieve group", err)
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -205,7 +219,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 
 	member, err := database.IsMemberGroup(user.ID, group_id)
 	if err != nil {
-		fmt.Println("Failed to check if user is a member")
+		fmt.Println("Failed to check if user is a member", err)
 		response := map[string]string{"error": "Failed to check if user is a member"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -226,7 +240,7 @@ func GroupHandler(w http.ResponseWriter, r *http.Request) {
 
 func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		fmt.Println("Method not allowed")
+		fmt.Println("Method not allowed", r.Method)
 		response := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(response)
@@ -235,7 +249,7 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := GetUserFromSession(r)
 	if err != nil || user == nil {
-		fmt.Println("Failed to retrieve user")
+		fmt.Println("Failed to retrieve user", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
@@ -244,7 +258,7 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
 	if err != nil {
-		fmt.Println("Invalid group ID")
+		fmt.Println("Invalid group ID", err)
 		response := map[string]string{"error": "Invalid group ID"}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
@@ -253,7 +267,7 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	group, err := database.GetGroupById(group_id)
 	if err != nil {
-		fmt.Println("Failed to retrieve group")
+		fmt.Println("Failed to retrieve group", err)
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -262,7 +276,7 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	member, err := database.IsMemberGroup(group_id, user.ID)
 	if err != nil {
-		fmt.Println("Failed to check if user is a member")
+		fmt.Println("Failed to check if user is a member", err)
 		response := map[string]string{"error": "Failed to check if user is a member"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
@@ -270,12 +284,20 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	Type := r.URL.Query().Get("type")
+	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
+	if err != nil {
+		fmt.Println("Invalid offset", err)
+		response := map[string]string{"error": "Invalid offset"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 
 	if Type == "members" {
 		if member || group.Privacy == "public" {
-			members, err := database.GetGroupMembers(group_id)
+			members, err := database.GetGroupMembers(group_id, offset)
 			if err != nil {
-				fmt.Println("Failed to retrieve members")
+				fmt.Println("Failed to retrieve members", err)
 				response := map[string]string{"error": "Failed to retrieve members"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)
@@ -291,9 +313,9 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if Type == "invitations" {
 		if group.Admin == user.Username {
-			invitations, err := database.GetInvitationsGroup(group_id)
+			invitations, err := database.GetInvitationsGroup(group_id, offset)
 			if err != nil {
-				fmt.Println("Failed to retrieve invitations")
+				fmt.Println("Failed to retrieve invitations", err)
 				response := map[string]string{"error": "Failed to retrieve invitations"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)
@@ -309,13 +331,24 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if Type == "posts" {
 		if member || group.Privacy == "public" {
-			posts, err := database.GetPostsGroup(group_id, user.ID, group.Privacy)
+			posts, err := database.GetPostsGroup(group_id, user.ID, offset, group.Privacy)
 			if err != nil {
-				fmt.Println("Failed to retrieve posts")
+				fmt.Println("Failed to retrieve posts", err)
 				response := map[string]string{"error": "Failed to retrieve posts"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)
 				return
+			}
+
+			for i := 0; i < len(posts); i++ {
+				posts[i].TotalSaves, err = database.CountSaves(posts[i].ID, posts[i].GroupID)
+				if err != nil {
+					fmt.Println("Failed to count saves", err)
+					response := map[string]string{"error": "Failed to count saves"}
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(response)
+					return
+				}
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(posts)
@@ -327,9 +360,9 @@ func GroupDetailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if Type == "events" {
 		if member {
-			events, err := database.GetEventGroup(group_id)
+			events, err := database.GetEventGroup(group_id, offset)
 			if err != nil {
-				fmt.Println("Failed to retrieve events")
+				fmt.Println("Failed to retrieve events", err)
 				response := map[string]string{"error": "Failed to retrieve events"}
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(response)

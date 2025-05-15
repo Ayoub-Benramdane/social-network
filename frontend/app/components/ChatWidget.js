@@ -260,7 +260,8 @@
 "use client";
 import { useState, useEffect, useRef, use } from "react";
 import "../styles/ChatWidget.css";
-import UserCard from "./UserCard";
+// import UserCard from "./UserCard";
+import ChatContact from "./ChatContact";
 import Message from "./Message";
 
 export default function ChatWidget({ users, groups, myData }) {
@@ -343,12 +344,12 @@ export default function ChatWidget({ users, groups, myData }) {
   }
 
   async function showUserTab(user) {
-    console.log(user.id);
+    console.log(user.user_id);
     setSelectedUser(user);
 
     try {
       const response = await fetch(
-        `http://localhost:8404/chats?id=${user.id}`,
+        `http://localhost:8404/chats?id=${user.user_id}`,
         {
           method: "GET",
           headers: {
@@ -409,7 +410,7 @@ export default function ChatWidget({ users, groups, myData }) {
               <div className="messages-container">
                 {messages.map((msg) => (
                   <Message
-                    key={msg.id}
+                    key={msg.message_id}
                     message={msg}
                     isSent={msg.username !== selectedUser.username}
                   />
@@ -444,7 +445,7 @@ export default function ChatWidget({ users, groups, myData }) {
                 className="send-message-container"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleMessagesSend(selectedUser.id);
+                  handleMessagesSend(selectedUser.user_id);
 
                   // handleMessagesSending(selectedUser.id);
                 }}
@@ -545,38 +546,16 @@ export default function ChatWidget({ users, groups, myData }) {
               )}
               {listToRender &&
                 listToRender.map((user) => (
-                  <div
-                    key={user.id}
+                  <ChatContact
+                    key={user.user_id}
+                    user={user}
+                    isOnline={user.is_online}
                     onClick={() => {
                       console.log("user: ", user);
                       showUserTab(user);
                       setSelectedUser(user);
                     }}
-                  >
-                    <UserCard key={user.id} user={user} />
-                    {/* <li key={user.id} className="user-item">
-                  <img
-                    src={
-                      user.avatar ||
-                      "./avatars/thorfinn-vinland-saga-episode-23-1.png"
-                    }
-                    className="user-avatar"
-                    alt={user.username}
                   />
-                  <div className="user-details">
-                    <div className="user-info">
-                      <h4 className="user-name">{`${user.first_name} ${user.last_name}`}</h4>
-                      <p className="user-username">@{user.username}</p>
-                    </div>
-                    <button
-                      className="follow-btn"
-                      onClick={() => handleFollow(user.id)}
-                    >
-                      Follow
-                    </button>
-                  </div>
-                </li> */}
-                  </div>
                 ))}
             </ul>
           </div>

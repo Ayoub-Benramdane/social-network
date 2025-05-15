@@ -38,16 +38,16 @@ func DeclineInvitation(intitation_id, group_id int64) error {
 	return err
 }
 
-func GetInvitationsFriends(user_id int64) ([]structs.Invitation, error) {
+func GetInvitationsFriends(user_id, offset int64) ([]structs.Invitation, error) {
 	var invitations []structs.Invitation
-	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar FROM invitations i JOIN users u ON i.invited_id = u.id WHERE i.recipient_id = ?", user_id)
+	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar FROM invitations i JOIN users u ON i.invited_id = u.id WHERE i.recipient_id = ? ORDER BY i.created_at DESC LIMIT ? OFFSET ?", user_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var invitation structs.Invitation
-		err = rows.Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar)
+		err = rows.Scan(&invitation.ID, &invitation.User.ID, &invitation.User.Username, &invitation.User.Avatar)
 		if err != nil {
 			return nil, err
 		}
@@ -56,16 +56,16 @@ func GetInvitationsFriends(user_id int64) ([]structs.Invitation, error) {
 	return invitations, nil
 }
 
-func GetInvitationsGroups(user_id int64) ([]structs.Invitation, error) {
+func GetInvitationsGroups(user_id, offset int64) ([]structs.Invitation, error) {
 	var invitations []structs.Invitation
-	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar, g.name FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE i.recipient_id = ?", user_id)
+	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar, g.name FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE i.recipient_id = ? ORDER BY i.created_at DESC LIMIT ? OFFSET ?", user_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var invitation structs.Invitation
-		err = rows.Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar, &invitation.Group)
+		err = rows.Scan(&invitation.ID, &invitation.User.ID, &invitation.User.Username, &invitation.User.Avatar, &invitation.Group.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -74,16 +74,16 @@ func GetInvitationsGroups(user_id int64) ([]structs.Invitation, error) {
 	return invitations, nil
 }
 
-func GetInvitationsGroup(group_id int64) ([]structs.Invitation, error) {
+func GetInvitationsGroup(group_id, offset int64) ([]structs.Invitation, error) {
 	var invitations []structs.Invitation
-	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE g.id = ?", group_id)
+	rows, err := DB.Query("SELECT i.id, u.id, u.username, u.avatar FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE g.id = ? ORDER BY i.created_at DESC LIMIT ? OFFSET ?", group_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var invitation structs.Invitation
-		err = rows.Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar)
+		err = rows.Scan(&invitation.ID, &invitation.User.ID, &invitation.User.Username, &invitation.User.Avatar)
 		if err != nil {
 			return nil, err
 		}
@@ -105,10 +105,10 @@ func DeleteInvitationGroup(invited_id, group_id int64) error {
 func GetInvitationById(invitation_id, group_id int64) (structs.Invitation, error) {
 	var invitation structs.Invitation
 	if group_id != 0 {
-		err := DB.QueryRow("SELECT i.id, u.id, u.username, u.avatar, g.name FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE i.id = ?", invitation_id).Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar, &invitation.Group)
+		err := DB.QueryRow("SELECT i.id, u.id, u.username, u.avatar, g.name FROM invitations_groups i JOIN users u ON u.id = i.invited_id JOIN groups g ON i.group_id = g.id WHERE i.id = ?", invitation_id).Scan(&invitation.ID, &invitation.User.ID, &invitation.User.Username, &invitation.User.Avatar, &invitation.Group)
 		return invitation, err
 	}
-	err := DB.QueryRow("SELECT i.id, i.invited_id, u.username, u.avatar FROM invitations i JOIN users u ON i.invited_id = u.id WHERE i.id = ?", invitation_id).Scan(&invitation.ID, &invitation.SenderID, &invitation.Sender, &invitation.Avatar)
+	err := DB.QueryRow("SELECT i.id, i.invited_id, u.username, u.avatar FROM invitations i JOIN users u ON i.invited_id = u.id WHERE i.id = ?", invitation_id).Scan(&invitation.ID, &invitation.User.ID, &invitation.User.Username, &invitation.User.Avatar)
 	return invitation, err
 }
 

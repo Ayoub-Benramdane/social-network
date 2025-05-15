@@ -59,13 +59,16 @@ export default function Home() {
 
   const fetchHomeData = async () => {
     try {
-      const response = await fetch("http://localhost:8404/home", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      const response = await fetch(
+        "http://localhost:8404/home?offset=0&offset_messages=0",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -81,7 +84,10 @@ export default function Home() {
   };
 
   const addNewPost = (newPost) => {
-    setPosts((prevPosts) => [newPost, ...prevPosts]);
+    setPosts((prevPosts) => {
+      const updatedPosts = [newPost, ...prevPosts];
+      return updatedPosts;
+    });
   };
 
   const toggleForm = () => {

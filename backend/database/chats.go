@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-func GetConnections(user_id int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT DISTINCT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN follows f ON (u.id = f.follower_id OR u.id = f.following_id) WHERE (f.follower_id  = ? OR f.following_id = ?)", user_id, user_id)
+func GetConnections(user_id, offset int64) ([]structs.User, error) {
+	rows, err := DB.Query("SELECT DISTINCT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN follows f ON (u.id = f.follower_id OR u.id = f.following_id) WHERE (f.follower_id  = ? OR f.following_id = ?) LIMIT ? OFFSET ?", user_id, user_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,7 @@ func GetConnections(user_id int64) ([]structs.User, error) {
 		if err != nil {
 			return nil, err
 		}
-		connection.TotalMessages, err = GetCountConversationMessages(connection.ID, user_id)
+		connection.Message.TotalMessages, err = GetCountConversationMessages(connection.ID, user_id)
 		if err != nil {
 			return nil, err
 		}
@@ -38,8 +38,8 @@ func SendMessage(sender_id, receiver_id, group_id int64, content, image string) 
 	return err
 }
 
-func GetConversation(user_id, receiver_id int64) ([]structs.Message, error) {
-	rows, err := DB.Query("SELECT m.id, u.username, u.avatar, m.content, m.created_at FROM messages m JOIN users u ON u.id = m.sender_id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.created_at ASC", user_id, receiver_id, receiver_id, user_id)
+func GetConversation(user_id, receiver_id, offset int64) ([]structs.Message, error) {
+	rows, err := DB.Query("SELECT m.id, u.username, u.avatar, m.content, m.created_at FROM messages m JOIN users u ON u.id = m.sender_id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.created_at ASC LIMIT ? OFFSET ?", user_id, receiver_id, receiver_id, user_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func GetConversation(user_id, receiver_id int64) ([]structs.Message, error) {
 	return chats, nil
 }
 
-func GetGroupConversation(group_id int64) ([]structs.Message, error) {
-	rows, err := DB.Query("SELECT c.id, u.username, u.avatar, c.message, c.created_at FROM group_chats c JOIN users u ON u.id = c.sender_id WHERE c.group_id = ? ORDER BY c.created_at ASC", group_id)
+func GetGroupConversation(group_id, offset int64) ([]structs.Message, error) {
+	rows, err := DB.Query("SELECT c,id, u.username, u.avatar, c.message, c.chat_image, c.created_at FROM group_chats c JOIN users u ON u.id = c.sender_id WHERE c.group_id = ? ORDER BY c.created_at ASC LIMIT ? OFFSET ?", group_id, 10, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func GetGroupConversation(group_id int64) ([]structs.Message, error) {
 	for rows.Next() {
 		var chat structs.Message
 		var date time.Time
-		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &date); err != nil {
+		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &chat.Image, &date); err != nil {
 			return nil, err
 		}
 

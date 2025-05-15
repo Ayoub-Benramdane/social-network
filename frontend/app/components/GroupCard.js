@@ -1,5 +1,6 @@
 import React from "react";
 import "../../styles/GroupsPage.css";
+import { joinGroup, leaveGroup, deleteGroup } from  "../functions/group";
 
 export default function GroupCard({ group, onClick, isJoined }) {
   return (
@@ -23,8 +24,17 @@ export default function GroupCard({ group, onClick, isJoined }) {
         </div>
 
         <div className="group-actions">
-          <button className={`group-join-btn ${isJoined ? "joined" : ""}`}>
-            {isJoined ? "Joined" : "Join Group"}
+          <button className={`group-join-btn ${isJoined ? "joined" : ""}`}
+          onClick={() => {
+            
+            if (isJoined) {
+              leaveGroup(group)
+            } else {
+              joinGroup(group)
+            }
+          }}
+          >
+            {isJoined ? "Leave" : "Join Group"}
           </button>
         </div>
       </div>

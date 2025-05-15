@@ -203,8 +203,8 @@ export default function Navbar({ user }) {
             onClick={() => setActiveLink("home")}
           >
             <Link href="/">
-            <img src="./icons/home.svg" alt="Home" />
-            <span>Home</span>
+              <img src="./icons/home.svg" alt="Home" />
+              <span>Home</span>
             </Link>
           </button>
 
@@ -222,8 +222,10 @@ export default function Navbar({ user }) {
             className={`nav-link ${activeLink === "events" ? "active" : ""}`}
             onClick={() => setActiveLink("events")}
           >
-            <img src="./icons/events.svg" alt="Events" />
-            <span>Events</span>
+            <Link href="/Events">
+              <img src="./icons/events.svg" alt="Events" />
+              <span>Events</span>
+            </Link>
           </button>
         </div>
       </div>
@@ -238,14 +240,11 @@ export default function Navbar({ user }) {
       <div className="user-actions">
         <button className="notification-button" onClick={toggleNotifications}>
           <img src="./icons/notification.svg" alt="Notifications" />
-          {user.total_notifications > 0 && (
+          {user.total_notifications > 0 ? (
             <span className="badge">{user.total_notifications || 1}</span>
-          )}{" "}
-          : (
-          <span className="notification-count">
-            {user.total_notifications || 0}
-          </span>
-          )
+          ) : (
+            <span className="notification-count">0</span>
+          )}
         </button>
 
         {showNotifications && <NotificationsComponent />}
@@ -281,7 +280,7 @@ export default function Navbar({ user }) {
 
           {showProfileMenu && (
             <div className="profile-menu">
-              <a href={`/profile/${user.id}`} className="menu-item">
+              <a href={`/profile/${user.user_id}`} className="menu-item">
                 <img src="./icons/user.svg" alt="Profile" />
                 <span>My Profile</span>
               </a>

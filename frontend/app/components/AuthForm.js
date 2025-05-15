@@ -93,7 +93,6 @@ export default function AuthForm({ onLoginSuccess }) {
       if (!formData.lastName) newErrors.lastName = "Last name is required";
       if (!formData.dateOfBirth)
         newErrors.dateOfBirth = "Date of birth is required";
-      if (!formData.aboutMe) newErrors.aboutMe = "About me is required";
 
       if (!formData.confirmedPassword) {
         newErrors.confirmedPassword = "Please confirm your password";
@@ -158,10 +157,13 @@ export default function AuthForm({ onLoginSuccess }) {
         registerData.append("cover", formData.cover);
       }
 
-      const response = await fetch("http://localhost:8404/register", {
-        method: "POST",
-        body: registerData,
-      });
+      const response = await fetch(
+        "http://localhost:8404/register?type=register",
+        {
+          method: "POST",
+          body: registerData,
+        }
+      );
 
       if (response.ok) {
         setSuccessMessage("Registration successful! You can now log in.");
