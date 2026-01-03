@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
 	structs "social-network/data"
 	"social-network/database"
-	"strconv"
 )
 
 func Home(w http.ResponseWriter, r *http.Request) {
@@ -36,25 +37,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offset_messages, err := strconv.ParseInt(r.URL.Query().Get("offset_messages"), 10, 64)
-	if err != nil {
-		fmt.Println("Error parsing offset_messages:", err)
-		response := map[string]string{"error": "Invalid offset_messages"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	user_info, err := database.GetProfileInfo(user.ID)
-	if err != nil {
-		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	following, err := database.GetFollowing(user.ID, 5)
+	following, err := database.GetUserFollowing(user.UserID)
 	if err != nil {
 		fmt.Println("Failed to retrieve followings", err)
 		response := map[string]string{"error": "Failed to retrieve followings"}
@@ -63,7 +46,16 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	suggested_users, err := database.GetNotFollowing(user.ID, 5)
+	userInfo, err := database.GetProfileInfo(user.UserID, following)
+	if err != nil {
+		fmt.Println("Failed to retrieve user", err)
+		response := map[string]string{"error": "Failed to retrieve user"}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	suggestedUsers, err := database.GetSuggestedUsers(user.UserID)
 	if err != nil {
 		fmt.Println("Failed to retrieve not following", err)
 		response := map[string]string{"error": "Failed to retrieve not following"}
@@ -72,7 +64,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := database.GetPosts(user.ID, offset, following)
+	posts, err := database.GetPosts(user.UserID, offset, following)
 	if err != nil {
 		fmt.Println("Failed to retrieve posts", err)
 		response := map[string]string{"error": "Failed to retrieve posts"}
@@ -81,7 +73,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	best_categories, err := database.GetBestCategories()
+	bestCategories, err := database.FetchTopCategories()
 	if err != nil {
 		fmt.Println("Failed to retrieve best categories", err)
 		response := map[string]string{"error": "Failed to retrieve best categories"}
@@ -90,16 +82,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := database.GetCountUserGroups(user.ID)
-	if err != nil {
-		fmt.Println("Failed to count groups", err)
-		response := map[string]string{"error": "Failed to count groups"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	my_groups, err := database.GetGroups(user.ID, count)
+	myGroups, err := database.GetUserGroups(*user)
 	if err != nil {
 		fmt.Println("Failed to retrieve my groups", err)
 		response := map[string]string{"error": "Failed to retrieve my groups"}
@@ -108,7 +91,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	suggested_groups, err := database.GetSuggestedGroups(user.ID, 5)
+	suggestedGroups, err := database.GetSuggestedGroups(user.UserID)
 	if err != nil {
 		fmt.Println("Failed to retrieve suggested groups", err)
 		response := map[string]string{"error": "Failed to retrieve suggested groups"}
@@ -117,7 +100,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	connections, err := database.GetConnections(user.ID, offset_messages)
+	connections, err := database.FetchUserConnections(user.UserID)
 	if err != nil {
 		fmt.Println("Failed to retrieve connections", err)
 		response := map[string]string{"error": "Failed to retrieve connections"}
@@ -126,7 +109,7 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var home = struct {
+	home := struct {
 		User           structs.User       `json:"user"`
 		Posts          []structs.Post     `json:"posts"`
 		BestCategories []structs.Category `json:"best_categories"`
@@ -135,12 +118,12 @@ func Home(w http.ResponseWriter, r *http.Request) {
 		SuggestedUsers []structs.User     `json:"suggested_users"`
 		Connections    []structs.User     `json:"connections"`
 	}{
-		User:           user_info,
+		User:           userInfo,
 		Posts:          posts,
-		BestCategories: best_categories,
-		MyGroups:       my_groups,
-		DiscoverGroups: suggested_groups,
-		SuggestedUsers: suggested_users,
+		BestCategories: bestCategories,
+		MyGroups:       myGroups,
+		DiscoverGroups: suggestedGroups,
+		SuggestedUsers: suggestedUsers,
 		Connections:    connections,
 	}
 
