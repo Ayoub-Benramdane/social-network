@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+public/
 
 # dependencies
 /node_modules
@@ -20,6 +20,26 @@
 # production
 /build
 
+# backend build
+/target
+/bin
+*.jar
+*.class
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# docker
+docker-data/
+docker-volumes/
+
+# uploads / temp
+uploads/
+tmp/
+
 # misc
 .DS_Store
 *.pem
@@ -30,7 +50,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env
 .env*
 
 # vercel

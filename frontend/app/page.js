@@ -1,102 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Navbar from "./components/NavBar";
+import { useState, useEffect, useRef } from "react";
 import LeftSidebar from "./components/LeftSideBar";
 import ProfileCard from "./components/ProfileCard";
 import TopGroups from "./components/TopGroups";
 import PostComponent from "./components/PostComponent";
-import AuthForm from "./components/AuthForm";
+import StoriesComponent from "./components/StoriesComponent";
+import PostFormModal from "./components/PostFormModal";
 
-// import Notifications from "./components/NotificationsComponent";
-import ChatWidget from "./components/ChatWidget";
+
 import "./styles/page.css";
 
 export default function Home() {
   const [error, setError] = useState(null);
-
   const [isLoading, setIsLoading] = useState(true);
-  const [isLogin, setIsLogin] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [homeData, setHomeData] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [stories, setStories] = useState([]);
+  const [isFetchingMorePosts, setIsFetchingMorePosts] = useState(true);
+  const [showPostForm, setShowPostForm] = useState(false);
+
+  const postsRef = useRef(null);
 
   useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const response = await fetch("http://localhost:8404/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data === true) {
-            setIsLoggedIn(true);
-          } else {
-            setIsLoggedIn(false);
-          }
-        }
-      } catch (error) {
-        setError(true);
-        console.error("Error checking login status:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkLoginStatus();
+    fetchHomeData();
   }, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchHomeData();
-    }
-  }, [isLoggedIn]);
-
-  const fetchHomeData = async () => {
+  const fetchHomeData = async (offset = 0) => {
     try {
       const response = await fetch(
-        "http://localhost:8404/home?offset=0&offset_messages=0",
+        `http://localhost:8404/home?offset=${offset}`,
         {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setHomeData(data);
-        setPosts(data.posts);
-        console.log("Data received: ", data);
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const data = await response.json();
+      setHomeData(data);
+      if (data.user.stories) {
+        setStories(data.user.stories);
+      }
+      if (offset === 0) setPosts(data.posts);
+      else {
+        setPosts(posts ? [...posts, ...data.posts] : data.posts)
+      }
+      if (data.posts.length < 10) {
+        setIsFetchingMorePosts(false);
       }
     } catch (error) {
-      setError(true);
-
-      console.error("Error fetching posts:", error);
+      console.log("Error fetching posts:", error);
+      setError("Error fetching data.")
+    } finally {
+      setIsLoading(false);
+      setError(null)
     }
   };
 
-  const addNewPost = (newPost) => {
-    setPosts((prevPosts) => {
-      const updatedPosts = [newPost, ...prevPosts];
-      return updatedPosts;
-    });
+  const addNewPost = () => {
+    fetchHomeData(0)
   };
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
+  const handleCreatePost = () => {
+    setShowPostForm(true);
   };
 
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-  };
+  useEffect(() => {
+    const postsScroll = postsRef.current;
+    if (!postsScroll || !isFetchingMorePosts) return;
+
+    const handleScroll = () => {
+      if (postsScroll.scrollTop + postsScroll.clientHeight >= postsScroll.scrollHeight - 100) {
+        fetchHomeData(posts.length)
+      }
+    };
+
+    postsScroll.addEventListener("scroll", handleScroll);
+
+    return () => {
+      postsScroll.removeEventListener("scroll", handleScroll);
+    };
+  }, [posts]);
+
+  console.log(homeData);
+
 
   if (isLoading) {
     return (
@@ -106,6 +96,7 @@ export default function Home() {
       </div>
     );
   }
+
   if (error) {
     return (
       <div className="error-container">
@@ -122,15 +113,9 @@ export default function Home() {
     );
   }
 
-  if (!isLoggedIn) {
-    return <AuthForm onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  if (isLoggedIn && homeData) {
+  if (homeData) {
     return (
       <div className="app-container">
-        <Navbar user={homeData.user} />
-
         <div className="main-content">
           <div className="grid-layout">
             <div className="left-column">
@@ -140,7 +125,22 @@ export default function Home() {
               />
             </div>
 
-            <div className="center-column">
+            {/* <div className="center-column" ref={postsRef}>
+              <PostComponent posts={posts} />
+            </div> */}
+
+            <div className="center-column" ref={postsRef}>
+              <div className="stories-section">
+                <StoriesComponent storiesUsers={stories} />
+              </div>
+
+              <div className="create-post-button-wrapper">
+                <button className="create-post-button" onClick={handleCreatePost}>
+                  <img src="/icons/create.svg" alt="Create" />
+                  <span>Create Post</span>
+                </button>
+              </div>
+
               <PostComponent posts={posts} />
             </div>
 
@@ -152,14 +152,16 @@ export default function Home() {
               />
               <TopGroups groups={homeData.discover_groups} />
             </div>
+
+            {showPostForm && (
+              <PostFormModal
+                onClose={() => setShowPostForm(false)}
+                user={homeData.user}
+                onPostCreated={addNewPost}
+              />
+            )}
           </div>
         </div>
-
-        <ChatWidget
-          users={homeData.connections}
-          groups={homeData.my_groups}
-          myData={homeData.user}
-        />
       </div>
     );
   }
