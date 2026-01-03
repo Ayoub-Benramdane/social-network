@@ -1,4 +1,4 @@
-async function handleLike(postId) {
+async function handleLike(postId, setPosts) {
   try {
     const response = await fetch("http://localhost:8404/like", {
       method: "POST",
@@ -6,7 +6,7 @@ async function handleLike(postId) {
         "Content-Type": "application/json",
       },
       credentials: "include",
-      body: JSON.stringify({ post_id: postId, group_id: 0 }),
+      body: JSON.stringify({ post_id: postId }),
     });
 
     if (!response.ok) {
@@ -17,7 +17,7 @@ async function handleLike(postId) {
       const updatedPost = await response.json();
 
       setPosts((prevPosts) =>
-        prevPosts.map((post) =>
+        prevPosts?.map((post) =>
           post.post_id === postId
             ? {
                 ...post,
@@ -27,8 +27,6 @@ async function handleLike(postId) {
             : post
         )
       );
-
-      //   console.log(updatedPost);
     }
   } catch (error) {
     console.error(error);
