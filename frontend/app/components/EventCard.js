@@ -1,140 +1,142 @@
-// EventCard.js - Enhanced Visual Design
 import React from "react";
-import "../styles/EventCard.css";
+import styles from "../styles/EventCard.module.css";
+import { joinGroup } from "../functions/group";
 
-export default function EventCard({ event, compact = false }) {
-  // Format dates
+export default function EventCard({ event, onAction }) {
   const startDate = new Date(event.start_date);
   const endDate = new Date(event.end_date);
 
-  // Format date for display
   const formatDate = (date) => {
     const month = date.toLocaleString("default", { month: "short" });
     const day = date.getDate();
-    return { month, day };
+    const year = date.getFullYear();
+    return { month, day, year };
   };
 
-  const { month, day } = formatDate(startDate);
+  const { month, day, year } = formatDate(startDate);
+  const { month: endMonth, day: endDay, year: endYear } = formatDate(endDate);
 
-  // Format time range
-  const timeRange = `${startDate.toLocaleTimeString([], {
+  const StartRange = `${startDate.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-  })} - ${endDate.toLocaleTimeString([], {
+  })} ${day}/${month}/${year}`;
+
+  const EndRange = `${endDate.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
-  })}`;
+  })} ${endDay}/${endMonth}/${endYear}`;
 
-  // Generate gradient colors based on event name
-  const generateGradient = (name) => {
-    const colors = [
-      ["#FF9966", "#FF5E62"], // Warm orange to red
-      ["#56CCF2", "#2F80ED"], // Light blue to blue
-      ["#A770EF", "#CF8BF3"], // Purple to light purple
-      ["#11998e", "#38ef7d"], // Teal to green
-      ["#FC466B", "#3F5EFB"], // Pink to purple
-      ["#FDBB2D", "#22C1C3"], // Yellow to teal
-    ];
+  const JoinToEvent = async (eventId, groupId, eventType) => {
+    try {
+      const response = await fetch(`http://localhost:8404/join_to_event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          event_id: eventId,
+          group_id: groupId,
+          type: eventType,
+        }),
+      });
+      const data = await response.json();
+      console.log("Join to event response:", data);
 
-    // Use the sum of char codes to select a gradient
-    const charSum = name
-      .split("")
-      .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const colorIndex = charSum % colors.length;
-
-    return `linear-gradient(135deg, ${colors[colorIndex][0]}, ${colors[colorIndex][1]})`;
+      if (!response.ok) {
+        throw new Error("Failed to join the event.");
+      }
+    } catch (error) {
+      console.error("Error joining event:", error);
+    }
   };
 
   return (
-    <div className={`event-card ${compact ? "event-card-compact" : ""}`}>
-      {event.image ? (
-        <div className="event-image-container">
-          <img src={event.image} alt={event.name} className="event-image" />
-          <div className="event-date-badge">
-            <span className="event-month">{month}</span>
-            <span className="event-day">{day}</span>
-          </div>
+    <div className={styles.eventCard}>
+      <div className={styles.eventImageContainer}>
+        <img
+          src={event.image || "/inconnu/event-placeholder.png"}
+          alt={event.name}
+          className={styles.eventImage}
+        />
+        <div className={styles.eventDateBadge}>
+          <span className={styles.eventMonth}>{month}</span>
+          <span className={styles.eventDay}>{day}</span>
         </div>
-      ) : (
-        <div
-          className="event-gradient-header"
-          style={{ background: generateGradient(event.name) }}
-        >
-          <div className="event-date-badge">
-            <span className="event-month">{month}</span>
-            <span className="event-day">{day}</span>
-          </div>
-          <div className="event-gradient-title">
-            {event.name.substring(0, 2).toUpperCase()}
-          </div>
-        </div>
-      )}
+      </div>
 
-      <div className="event-card-content">
-        <h3 className="event-name">{event.name}</h3>
+      <div className={styles.eventCardContent}>
+        <h3 className={styles.eventName}>{event.name}</h3>
 
-        <div className="event-meta">
-          <div className="event-meta-item">
-            <svg viewBox="0 0 24 24" className="event-icon">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
+        <div className={styles.eventMeta}>
+          <div className={styles.eventMetaItem}>
             <span>{event.location}</span>
           </div>
 
-          <div className="event-meta-item">
-            <svg viewBox="0 0 24 24" className="event-icon">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <span>{timeRange}</span>
+          <div className={styles.eventMetaItem}>
+            <span>{StartRange}</span>
           </div>
 
-          {!compact && event.group_name && (
-            <div className="event-meta-item">
-              <svg viewBox="0 0 24 24" className="event-icon">
-                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 00-3-3.87" />
-                <path d="M16 3.13a4 4 0 010 7.75" />
-              </svg>
+          <div className={styles.eventMetaItem}>
+            <span>{EndRange}</span>
+          </div>
+
+          {event.group_name && (
+            <div className={styles.eventMetaItem}>
               <span>{event.group_name}</span>
             </div>
           )}
 
-          {!compact && event.creator && (
-            <div className="event-meta-item">
-              <svg viewBox="0 0 24 24" className="event-icon">
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+          {event.creator && (
+            <div className={styles.eventMetaItem}>
               <span>Created by {event.creator}</span>
             </div>
           )}
         </div>
 
-        {!compact && event.description && (
-          <p className="event-description">{event.description}</p>
+        {event.description && (
+          <>
+            <p className={styles.eventDescription}>{event.description}</p>
+            <p
+              style={
+                event.type === "GOING"
+                  ? { color: "rgb(103, 211, 103)" }
+                  : { color: "#ef4444" }
+              }
+              className={styles.isAttending}
+            >
+              {event.type}
+            </p>
+          </>
         )}
       </div>
 
-      <div className="event-card-footer">
-        <button className="event-action-button">
-          <svg viewBox="0 0 24 24" className="event-button-icon">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-          </svg>
-          <span>Interested</span>
+      <div className={styles.eventCardFooter}>
+        <button
+          className={styles.eventActionButton}
+          disabled={event.type === "GOING"}
+          onClick={async () => {
+            await JoinToEvent(event.event_id, event.group_id, "going")
+            onAction();
+          }
+        }
+        >
+          <span>Going</span>
         </button>
 
-        {!compact && (
-          <button className="event-details-button">
-            <svg viewBox="0 0 24 24" className="event-button-icon">
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-            <span>Details</span>
-          </button>
-        )}
+        <button
+          className={styles.eventDetailsButton}
+          disabled={event.type === "NOT GOING"}
+          onClick={async ()  =>{
+
+            
+            await JoinToEvent(event.event_id, event.group_id, "not_going")
+            onAction();
+          }
+          }
+        >
+          <span>Not Going</span>
+        </button>
       </div>
     </div>
   );

@@ -1,50 +1,30 @@
 import { useState } from "react";
+import { handleFollow } from "../functions/user";
+import styles from "../styles/UserCard.module.css";
 
 export default function UserCard({ user, action, onClick }) {
-  const [isFollowing, setIsFollowing] = useState();
-  async function handleFollow(user_id) {
-    // console.log(`Following user with ID: ${userId}`);
-    try {
-      const response = await fetch(`http://localhost:8404/follow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(user_id),
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        console.log("Followed successfully");
-      }
-      const data = await response.json();
-      console.log("Followed user:", data);
-    } catch (error) {
-      console.error("Error following user:", error);
-    }
-  }
+  const [newStatus, setNewStatus] = useState("Follow");
 
   return (
-    <li
-      className="user-item"
-      // onClick={}
-    >
+    <li className={styles.userItem} onClick={onClick}>
       <img
+        className={styles.userAvatar}
         src={user.avatar || user.image}
-        className="user-avatar"
         alt={user.username || user.name}
       />
-      <div className="user-details">
-        <div className="user-info">
-          {/* <a key={user.id} href={`/profile/${user.id}`} className="user-link"> */}
-          <h4 className="user-name">
+      <div className={styles.userDetails}>
+        <div
+          className={styles.userInfo}
+          onClick={() => {
+            window.location.href = `/profile?id=${user.user_id}`;
+          }}
+        >
+          <h4 className={styles.userName}>
             {user.first_name
               ? `${user.first_name} ${user.last_name}`
               : user.name}
           </h4>
-          {/* </a> */}
-          {/* <h4 className="user-name">{`${user.first_name} ${user.last_name}`}</h4> */}
-          <p className="user-username">
+          <p className={styles.userUsername}>
             {user.username
               ? `@${user.username}`
               : `(${user.total_members}) Members`}
@@ -53,14 +33,12 @@ export default function UserCard({ user, action, onClick }) {
 
         {action === "follow" && (
           <button
-            className="follow-btn"
             onClick={() => {
-              setIsFollowing(!isFollowing);
-              handleFollow(user.user_id);
+              setNewStatus(handleFollow(user.user_id, 0));
             }}
+            className={`${styles.followBtn} ${styles[newStatus]}`}
           >
-            {!isFollowing ? "Follow" : "Following"}
-            {/* Follow */}
+            {newStatus}
           </button>
         )}
       </div>

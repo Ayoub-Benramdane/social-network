@@ -1,0 +1,138 @@
+.chatContact {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 12px;
+    margin: 4px 8px;
+  }
+  
+  .chatContact:hover {
+    background-color: #F8FAFF;
+  }
+  
+  .chatContactAvatarContainer {
+    position: relative;
+    flex-shrink: 0;
+  }
+  
+  .chatContactAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+  }
+  
+  .chatContactAvatarFallback {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3555F9 0%, #4466FF 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  
+  .statusIndicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+  }
+  
+  .statusIndicator.online {
+    background-color: #10B981;
+  }
+  
+  .statusIndicator.offline {
+    background-color: #94A3B8;
+  }
+  
+  .chatContactInfo {
+    flex: 1;
+    min-width: 0; 
+  }
+  
+  .chatContactPrimary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+  }
+  
+  .chatContactName {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1E293B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .unreadBadge {
+    background: linear-gradient(135deg, #3555F9 0%, #4466FF 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  .chatContactSecondary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .chatContactUsername {
+    margin: 0;
+    font-size: 13px;
+    color: #64748B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .chatContactTime {
+    font-size: 12px;
+    color: #94A3B8;
+    white-space: nowrap;
+  }
+  
+  .chatContact.active {
+    background-color: #EEF2FF;
+  }
+  
+  .chatContact.active .chatContactName {
+    color: #3555F9;
+  }
+  
+  .chat-contact:hover .chat-contact-avatar {
+    transform: scale(1.05);
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .chatContact.hasNewMessage {
+    animation: pulse 1s ease-in-out;
+  }

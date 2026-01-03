@@ -1,40 +1,67 @@
-import React from "react";
-import "../../styles/GroupsPage.css";
-import { joinGroup, leaveGroup, deleteGroup } from  "../functions/group";
+import { React, useState } from "react";
+import styles from "../styles/GroupCard.module.css";
 
-export default function GroupCard({ group, onClick, isJoined }) {
+export default function GroupCard({
+  group,
+  isJoined,
+  onClick,
+  onAction,
+  onJoin,
+}) {
+  const [localIsJoined, setLocalIsJoined] = useState(isJoined);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleAction = () => {
+    setIsProcessing(true);
+    try {
+      if (group.role === "admin" || group.role === "member") {
+        onAction();
+      } else {
+        onJoin();
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <div className="group-card" onClick={onClick}>
-      <div className="group-card-content">
-        <div className="group-header">
-          <div className="group-avatar">
+    <div className={styles.groupCard} onClick={onClick}>
+      <div className={styles.groupCardContent}>
+        <div className={styles.groupHeader}>
+          <div className={styles.groupAvatar}>
             <img src={group.image} alt={group.name} />
           </div>
-          <div className="group-info">
-            <h4 className="group-name">{group.name}</h4>
-            <span className="group-label">
+          <div className={styles.groupInfo}>
+            <h4 className={styles.groupName}>{group.name}</h4>
+            <span className={styles.groupLabel}>
               {group.created_at || "Created recently"}
             </span>
           </div>
         </div>
 
-        <div className="group-details">
-          <h3 className="group-title">{group.description}</h3>
-          <p className="group-meta">{`${group.total_members || 0} members`}</p>
+        <div className={styles.groupDetails}>
+          <p className={styles.groupMeta}>{`${group.total_members || 0
+            } members - ${group.total_posts} posts - ${group.privacy}`}</p>
         </div>
 
-        <div className="group-actions">
-          <button className={`group-join-btn ${isJoined ? "joined" : ""}`}
-          onClick={() => {
-            
-            if (isJoined) {
-              leaveGroup(group)
-            } else {
-              joinGroup(group)
-            }
-          }}
+        <div className={styles.groupActions}>
+          <button
+            className={`${styles.groupJoinBtn} ${localIsJoined ? "joined" : ""
+              }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocalIsJoined(!localIsJoined);
+              handleAction();
+            }}
+            disabled={isProcessing}
           >
-            {isJoined ? "Leave" : "Join Group"}
+            {isProcessing
+              ? "Processing..."
+              : group.role === "admin"
+                ? "Delete Group"
+                : localIsJoined
+                  ? "Leave"
+                  : "Join Group"}
           </button>
         </div>
       </div>

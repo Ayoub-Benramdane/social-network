@@ -1,171 +1,155 @@
-// "use client";
-// import { useState } from "react";
-// import Link from "next/link";
-// import "../styles/NavBar.css";
-// // import Notifications from "./NotificationsComponent";
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import styles from "../styles/Navbar.module.css";
 
-// export default function Navbar({ user }) {
-//   const [activeLink, setActiveLink] = useState("home");
-//   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-//   // async function handleProfile() {
-//   //   try {
-//   //     const response = await fetch("http://localhost:8404/profile", {
-//   //       method: "GET",
-//   //       headers: {
-//   //         "Content-Type": "application/json",
-//   //       },
-//   //       credentials: "include",
-//   //     });
-
-//   //     if (response.ok) {
-//   //       const data = await response.json();
-//   //       console.log("profile data: ", data);
-//   //     }
-//   //   } catch (error) {
-//   //     console.error("Error logging out:", error);
-//   //   }
-//   // }
-//   const handleLogout = async () => {
-//     try {
-//       const response = await fetch("http://localhost:8404/logout", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         credentials: "include",
-//       });
-
-//       if (response.ok) {
-//         console.log("Logout");
-
-//         window.location.reload();
-//       }
-//     } catch (error) {
-//       console.error("Error logging out:", error);
-//     }
-//   };
-
-//   const toggleProfileMenu = () => {
-//     setShowProfileMenu(!showProfileMenu);
-//   };
-
-//   return (
-//     <nav className="navbar">
-//       <div className="navbar-left">
-//         <div className="logo">
-//           <img src="./icons/logo.svg" alt="Logo" />
-//           {/* <span className="logo-text">Social Network</span> */}
-//         </div>
-
-//         <div className="nav-links">
-//           <button
-//             className={`nav-link ${activeLink === "home" ? "active" : ""}`}
-//             onClick={() => setActiveLink("home")}
-//           >
-//             <img src="./icons/home.svg" alt="Home" />
-//             <span>Home</span>
-//           </button>
-
-//           <button
-//   className={`nav-link ${activeLink === "groups" ? "active" : ""}`}
-//   onClick={() => setActiveLink("groups")}
-// >
-//   <Link href="/groups">
-//     <img src="./icons/groups.svg" alt="Groups" />
-//     <span>Groups</span>
-//   </Link>
-// </button>
-
-//           <button
-//             className={`nav-link ${activeLink === "events" ? "active" : ""}`}
-//             onClick={() => setActiveLink("events")}
-//           >
-//             <img src="./icons/events.svg" alt="Events" />
-//             <span>Events</span>
-//           </button>
-//         </div>
-//       </div>
-
-//       <div className="search-bar">
-//         <div className="search-input-container">
-//           <img src="./icons/search.svg" alt="Search" className="search-icon" />
-//           <input type="text" placeholder="Search users and groups" />
-//         </div>
-//       </div>
-
-//       <div className="user-actions">
-//         {/* <Notifications></Notifications> */}
-
-//         <button className="action-icon notification-badge">
-//           <img src="./icons/notification.svg" alt="Notifications" />
-//           {user.total_notifications > 0 && (
-//             <span className="badge">{user.total_notifications || 1}</span>
-//           )}
-//         </button>
-
-//         <button className="action-icon message-badge">
-//           <img src="./icons/message.svg" alt="Messages" />
-//           {user.messages > 0 && (
-//             <span className="badge">{user.messages || 3}</span>
-//           )}
-//         </button>
-
-//         <div className="profile-dropdown">
-//           <button className="profile-button" onClick={toggleProfileMenu}>
-//             <img
-//               src={user.avatar}
-//               alt={user.username || "User"}
-//               className="user-avatar"
-//             />
-//             <div className="user-info">
-//               <span className="user-name">{`${user.first_name} ${user.last_name}`}</span>
-//               <span className="user-username">
-//                 @{user.username || "username"}
-//               </span>
-//             </div>
-//             <img
-//               src="./icons/drop-down.svg"
-//               alt="Menu"
-//               className={`dropdown-icon ${showProfileMenu ? "rotate" : ""}`}
-//             />
-//           </button>
-
-//           {showProfileMenu && (
-//             <div className="profile-menu">
-//               <a
-//                 // onClick={handleProfile}
-//                 href="/profile"
-//                 className="menu-item"
-//               >
-//                 <img src="./icons/user.svg" alt="Profile" />
-//                 <span>My Profile</span>
-//               </a>
-//               <button onClick={handleLogout} className="menu-item logout-item">
-//                 <img src="./icons/logout.svg" alt="Logout" />
-//                 <span>Logout</span>
-//               </button>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </nav>
-//   );
-// }
-
-import { useState } from "react";
-import Link from "next/link";
-import "../styles/NavBar.css";
 import NotificationsComponent from "./NotificationsComponent";
+import SuggestionCard from "./SuggestionCard";
+import { addToListeners, removeFromListeners } from "../websocket/ws";
 
-export default function Navbar({ user }) {
+export default function Navbar() {
   const [activeLink, setActiveLink] = useState("home");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [activeSugTab, setActiveSugTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState(null);
+  const [user, setUser] = useState();
+  const router = useRouter();
+  const pathname = usePathname();
+  const profileMenuRef = useRef(null);
+  const searchSugRef = useRef(null);
+  const notificationRef = useRef(null);
 
-  const toggleNotifications = () => {
-    setShowNotifications((prev) => !prev);
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (pathname === "/") {
+      setActiveLink("home");
+    } else if (pathname.startsWith("/group")) {
+      setActiveLink("groups");
+    } else if (pathname.startsWith("/event")) {
+      setActiveLink("events");
+    } else if (pathname.startsWith("/messages")) {
+      setActiveLink("messages");
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    addToListeners("notifications", handleNewMessage);
+    addToListeners("message", handleNewMessage);
+
+    return () => {
+      removeFromListeners("notifications", handleNewMessage);
+      removeFromListeners("message", handleNewMessage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setSuggestions([]);
+    fetchSuggestions();
+  }, [searchQuery, activeSugTab]);
+
+  const fetchUser = async () => {
+    try {
+      const response = await fetch("http://localhost:8404/user", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setUser(data);
+      } else {
+        throw new Error("Failed to fetch user data");
+      }
+    } catch (error) {
+      console.log("Failed to fetch user data:", error);
+    }
   };
+
+  const handleNewMessage = (msg) => {
+    if (msg.type === "notifications") setUser((prev) => ({
+      ...prev,
+      total_notifications: prev.total_notifications + 1,
+    }));
+
+    if (msg.type === "message" && msg.user_id != msg.current_user) setUser((prev) => ({
+      ...prev,
+      total_messages: 1,
+    }));
+  };
+
+  const fetchSuggestions = async () => {
+    const offset = 0;
+    try {
+      const response = await fetch(
+        `http://localhost:8404/search?query=${searchQuery}&offset=${offset}&type=${activeSugTab}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch suggestions");
+      }
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error("Failed to fetch suggestions", data.error);
+      }
+
+      setSuggestions((prevSuggestions) => {
+        const newSuggestions = data;
+        if (prevSuggestions) {
+          return {
+            ...prevSuggestions,
+            users: [
+              ...(prevSuggestions.users || []),
+              ...(newSuggestions.users || []),
+            ],
+            groups: [
+              ...(prevSuggestions.groups || []),
+              ...(newSuggestions.groups || []),
+            ],
+            events: [
+              ...(prevSuggestions.events || []),
+              ...(newSuggestions.events || []),
+            ],
+            posts: [
+              ...(prevSuggestions.posts || []),
+              ...(newSuggestions.posts || []),
+            ],
+          };
+        }
+        return newSuggestions;
+      });
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    }
+  };
+
 
   const handleLogout = async () => {
     try {
@@ -178,7 +162,6 @@ export default function Navbar({ user }) {
       });
 
       if (response.ok) {
-        console.log("Logout");
         window.location.reload();
       }
     } catch (error) {
@@ -188,103 +171,271 @@ export default function Navbar({ user }) {
 
   const toggleProfileMenu = () => {
     setShowProfileMenu(!showProfileMenu);
+    setShowNotifications(false);
+    setShowSearchSuggestions(false);
   };
 
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    setShowProfileMenu(false);
+    setShowSearchSuggestions(false);
+  };
+
+  const toggleSearchSuggestions = () => {
+    setShowSearchSuggestions(true);
+    setShowProfileMenu(false);
+    setShowNotifications(false);
+  };
+  const handleClickOutside = (event) => {
+    if (
+      profileMenuRef.current &&
+      !profileMenuRef.current.contains(event.target) &&
+      searchSugRef.current &&
+      !searchSugRef.current.contains(event.target) &&
+      notificationRef.current &&
+      !notificationRef.current.contains(event.target)
+    ) {
+      setShowProfileMenu(false);
+      setShowSearchSuggestions(false);
+      setShowNotifications(false);
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <nav className="navbar">
-      <div className="navbar-left">
-        <div className="logo">
+    <nav className={styles.navbar}>
+      <div className={styles.navbarLeft}>
+        <div className={styles.logo}>
           <img src="./icons/logo.svg" alt="Logo" />
         </div>
 
-        <div className="nav-links">
+        <div className={styles.navLinks}>
           <button
-            className={`nav-link ${activeLink === "home" ? "active" : ""}`}
-            onClick={() => setActiveLink("home")}
+            className={`${styles.navLink} ${activeLink === "home" ? styles.active : ""
+              }`}
+            onClick={() => {
+              router.push("/");
+
+              setActiveLink("home");
+            }}
           >
-            <Link href="/">
-              <img src="./icons/home.svg" alt="Home" />
-              <span>Home</span>
-            </Link>
+            {/* <Link href="/"> */}
+            <img src="./icons/home1.svg" alt="Home" />
+            <span>Home</span>
+            {/* </Link> */}
           </button>
 
           <button
-            className={`nav-link ${activeLink === "groups" ? "active" : ""}`}
-            onClick={() => setActiveLink("groups")}
+            className={`${styles.navLink} ${activeLink === "groups" ? styles.active : ""
+              }`}
+            onClick={() => {
+              router.push("/groups");
+
+              setActiveLink("groups");
+            }}
           >
-            <Link href="/groups">
-              <img src="./icons/groups.svg" alt="Groups" />
-              <span>Groups</span>
-            </Link>
+            {/* <Link href="/groups"> */}
+            <img src="./icons/groups.svg" alt="Groups" />
+            <span>Groups</span>
+            {/* </Link> */}
           </button>
 
           <button
-            className={`nav-link ${activeLink === "events" ? "active" : ""}`}
-            onClick={() => setActiveLink("events")}
+            className={`${styles.navLink} ${activeLink === "events" ? styles.active : ""
+              }`}
+            onClick={() => {
+              router.push("/Events");
+              setActiveLink("events");
+            }}
           >
-            <Link href="/Events">
-              <img src="./icons/events.svg" alt="Events" />
-              <span>Events</span>
-            </Link>
+            {/* <Link href="/Events"> */}
+            <img src="./icons/events.svg" alt="Events" />
+            <span>Events</span>
+            {/* </Link> */}
+          </button>
+          <button
+            className={`${styles.navLink} ${activeLink === "messages" ? styles.active : ""
+              }`}
+            onClick={() => {
+              router.push("/messages");
+              setActiveLink("messages");
+            }}
+          >
+            <img src="./icons/message.svg" alt="Messages" />
+            {user.total_messages > 0 && (
+              <span className={styles.badge}>!</span>
+            )}
+            <span>Messages</span>
           </button>
         </div>
       </div>
 
-      <div className="search-bar">
-        <div className="search-input-container">
-          <img src="./icons/search.svg" alt="Search" className="search-icon" />
-          <input type="text" placeholder="Search users and groups" />
-        </div>
-      </div>
-
-      <div className="user-actions">
-        <button className="notification-button" onClick={toggleNotifications}>
-          <img src="./icons/notification.svg" alt="Notifications" />
-          {user.total_notifications > 0 ? (
-            <span className="badge">{user.total_notifications || 1}</span>
-          ) : (
-            <span className="notification-count">0</span>
+      <div className={styles.searchBar} ref={searchSugRef}>
+        <form
+          className={styles.searchInputContainer}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim() !== "") {
+              router.push(
+                `/search-results?query=${encodeURIComponent(searchQuery)}`
+              );
+              setSearchQuery("");
+              setSuggestions(null);
+              setShowSearchSuggestions(false);
+            }
+          }}
+        >
+          <img
+            src="./icons/search.svg"
+            alt="Search"
+            className={styles.searchIcon}
+          />
+          <input
+            type="text"
+            placeholder="What's on your mind?"
+            value={searchQuery}
+            onFocus={() => toggleSearchSuggestions()}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {showSearchSuggestions && (
+            <div className={styles.searchSuggestions}>
+              <div className={styles.navLinks}>
+                <button
+                  className={`${styles.navLink} ${activeSugTab === "all" ? styles.active : ""
+                    }`}
+                  onClick={() => setActiveSugTab("all")}
+                >
+                  All
+                </button>
+                <button
+                  className={`${styles.navLink} ${activeSugTab === "users" ? styles.active : ""
+                    }`}
+                  onClick={() => setActiveSugTab("users")}
+                >
+                  Users
+                </button>
+                <button
+                  className={`${styles.navLink} ${activeSugTab === "groups" ? styles.active : ""
+                    }`}
+                  onClick={() => setActiveSugTab("groups")}
+                >
+                  Groups
+                </button>
+                <button
+                  className={`${styles.navLink} ${activeSugTab === "events" ? styles.active : ""
+                    }`}
+                  onClick={() => setActiveSugTab("events")}
+                >
+                  Events
+                </button>
+                <button
+                  className={`${styles.navLink} ${activeSugTab === "posts" ? styles.active : ""
+                    }`}
+                  onClick={() => setActiveSugTab("posts")}
+                >
+                  Posts
+                </button>
+              </div>
+              {suggestions &&
+                Object.values(suggestions).flat()?.length === 0 ? (
+                <div className={styles.noSuggestions}>No suggestions found</div>
+              ) : (
+                suggestions &&
+                Object.values(suggestions)
+                  .flat()
+                  ?.map((suggestion, index) => (
+                    <SuggestionCard key={index} suggestion={suggestion} onclick={() => {
+                      setShowSearchSuggestions(false)
+                    }} />
+                  ))
+              )}
+            </div>
           )}
-        </button>
+        </form>
+      </div>
 
-        {showNotifications && <NotificationsComponent />}
+      <div className={styles.userActions}>
+        <div ref={notificationRef}>
+          <button
+            className={styles.notificationButton}
+            onClick={toggleNotifications}
+          >
+            <img src="./icons/notification.svg" alt="Notifications" />
+            {user.total_notifications > 0 ? (
+              <span className={styles.badge}>
+                {user.total_notifications}
+              </span>
+            ) : (
+              <span className={styles.notificationCount}>0</span>
+            )}
+          </button>
 
-        <button className="action-icon message-badge">
+          {showNotifications && (
+            <NotificationsComponent
+              onMarkAllAsRead={() => {
+                setUser((prevUser) => ({
+                  ...prevUser,
+                  total_notifications: 0,
+                }));
+              }}
+              onClick={() => {
+                setUser((prevUser) => ({
+                  ...prevUser,
+                  total_notifications: prevUser.total_notifications - 1,
+                }));
+              }}
+            />
+          )}
+        </div>
+
+        {/* <button className={`${styles.actionIcon} ${styles.messageBadge}`}>
           <Link href="/messages">
             <img src="./icons/message.svg" alt="Messages" />
-            {user.messages > 0 && (
-              <span className="badge">{user.messages || 3}</span>
+            {user.total_messages > 0 && (
+              <span className={styles.badge}>{user.total_messages || 0}</span>
             )}
           </Link>
-        </button>
+        </button> */}
 
-        <div className="profile-dropdown">
-          <button className="profile-button" onClick={toggleProfileMenu}>
+        <div className={styles.profileDropdown} ref={profileMenuRef}>
+          <button className={styles.profileButton} onClick={toggleProfileMenu}>
             <img
               src={user.avatar}
               alt={user.username || "User"}
-              className="user-avatar"
+              className={styles.userAvatar}
             />
-            <div className="user-info">
-              <span className="user-name">{`${user.first_name} ${user.last_name}`}</span>
-              <span className="user-username">
+            <div className={styles.userInfo}>
+              <span
+                className={styles.userName}
+              >{`${user.first_name} ${user.last_name}`}</span>
+              <span className={styles.userUsername}>
                 @{user.username || "username"}
               </span>
             </div>
             <img
               src="./icons/drop-down.svg"
               alt="Menu"
-              className={`dropdown-icon ${showProfileMenu ? "rotate" : ""}`}
+              className={`${styles.dropdownIcon} ${showProfileMenu ? styles.rotate : ""
+                }`}
             />
           </button>
 
           {showProfileMenu && (
-            <div className="profile-menu">
-              <a href={`/profile/${user.user_id}`} className="menu-item">
+            <div className={styles.profileMenu}>
+              <a
+                href={`/profile?id=${user.user_id}`}
+                className={styles.menuItem}
+              >
                 <img src="./icons/user.svg" alt="Profile" />
                 <span>My Profile</span>
               </a>
-              <button onClick={handleLogout} className="menu-item logout-item">
+              <button
+                onClick={handleLogout}
+                className={`${styles.menuItem} ${styles.logoutItem}`}
+              >
                 <img src="./icons/logout.svg" alt="Logout" />
                 <span>Logout</span>
               </button>
