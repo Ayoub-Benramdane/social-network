@@ -5,125 +5,115 @@ import (
 	"fmt"
 	"html"
 	"net/http"
-	structs "social-network/data"
-	"social-network/database"
 	"strconv"
 	"strings"
+
+	structs "social-network/data"
+	"social-network/database"
 )
 
 func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		fmt.Println("Method not allowed", r.Method)
-		response := map[string]string{"error": "Method not allowed"}
+		resp := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
+		resp := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	var comment structs.Comment
-	comment.Content = r.FormValue("content")
-	comment.PostID, err = strconv.ParseInt(r.FormValue("post_id"), 10, 64)
+	var newComment structs.Comment
+	newComment.Content = strings.TrimSpace(r.FormValue("content"))
+	newComment.PostID, err = strconv.ParseInt(r.FormValue("post_id"), 10, 64)
 	if err != nil {
 		fmt.Println("Error parsing post ID:", err)
-		response := map[string]string{"error": "Invalid post ID"}
+		resp := map[string]string{"error": "Invalid post ID"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	comment.GroupID, err = strconv.ParseInt(r.FormValue("group_id"), 10, 64)
-	if err != nil {
-		fmt.Println("Error parsing group ID:", err)
-		response := map[string]string{"error": "Invalid post ID"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	var imagePath string
-	image, header, err := r.FormFile("commentImage")
+	var imageURL string
+	imageFile, imageHeader, err := r.FormFile("commentImage")
 	if err != nil && err.Error() != "http: no such file" {
 		fmt.Println("Error retrieving image:", err)
-		response := map[string]string{"error": "Failed to retrieve image"}
+		resp := map[string]string{"error": "Failed to retrieve image"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	if image != nil {
-		imagePath, err = SaveImage(image, header, "../frontend/public/comments/")
+	if imageFile != nil {
+		imageURL, err = SaveImage(imageFile, imageHeader, "../frontend/public/comments/")
 		if err != nil {
 			fmt.Println("Error saving image:", err)
-			response := map[string]string{"error": err.Error()}
+			resp := map[string]string{"error": err.Error()}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
-		newpath := strings.Split(imagePath, "/public")
-		imagePath = newpath[1]
+		parts := strings.Split(imageURL, "/public")
+		imageURL = parts[1]
 	}
 
-	if comment.Content == "" || len(comment.Content) > 100 {
+	if newComment.Content == "" || len(newComment.Content) > 100 {
 		fmt.Println("Comment content is required and must be less than 100 characters")
-		response := map[string]string{"error": "Comment content is required and must be less than 100 characters"}
+		resp := map[string]string{"error": "Comment content is required and must be less than 100 characters"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	post, err := database.GetPost(user.ID, comment.PostID, comment.GroupID)
+	postData, err := database.GetPost(currentUser.UserID, newComment.PostID)
 	if err != nil {
 		fmt.Println("Failed to retrieve post", err)
-		response := map[string]string{"error": "Failed to retrieve post"}
+		resp := map[string]string{"error": "Failed to retrieve post"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	var id int64
-	var type_notification = "comment"
-	id, err = database.CreateComment(comment.Content, user.ID, comment.GroupID, post, imagePath)
-	if comment.GroupID != 0 {
-		type_notification += "comment group"
-	}
+	var commentID int64
+	notificationType := "comment"
 
+	commentID, err = database.CreatePostComment(newComment.Content, currentUser.UserID, postData, imageURL)
 	if err != nil {
 		fmt.Println("Failed to create comment", err)
-		response := map[string]string{"error": "Failed to create comment"}
+		resp := map[string]string{"error": "Failed to create comment"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	if post.UserID != user.ID {
-		if err := database.CreateNotification(user.ID, post.UserID, post.ID, post.GroupID, 0, type_notification); err != nil {
+	if postData.AuthorID != currentUser.UserID {
+		if err := database.CreateNotification(currentUser.UserID, postData.AuthorID, postData.PostID, postData.GroupID, 0, notificationType); err != nil {
 			fmt.Println("Failed to create notification", err)
-			response := map[string]string{"error": "Failed to create notification"}
+			resp := map[string]string{"error": "Failed to create notification"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
 
-	newComment := structs.Comment{
-		ID:        id,
-		PostID:    comment.PostID,
-		GroupID:   comment.GroupID,
-		Content:   html.EscapeString(comment.Content),
-		User:      *user,
+	responseComment := structs.Comment{
+		CommentID: commentID,
+		PostID:    newComment.PostID,
+		Content:   html.EscapeString(newComment.Content),
+		AuthorID:  currentUser.UserID,
+		Username:  currentUser.Username,
+		AvatarURL: currentUser.AvatarURL,
 		CreatedAt: "Just Now",
-		Image:     imagePath,
+		ImageURL:  imageURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(newComment)
+	json.NewEncoder(w).Encode(responseComment)
 }

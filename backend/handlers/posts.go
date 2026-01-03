@@ -6,10 +6,11 @@ import (
 	"html"
 	"log"
 	"net/http"
-	structs "social-network/data"
-	"social-network/database"
 	"strconv"
 	"strings"
+
+	structs "social-network/data"
+	"social-network/database"
 )
 
 func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +20,10 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if !CheckLastActionTime(w, r, "posts") {
 		return
 	}
 
@@ -37,7 +42,7 @@ func CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
-	categories, err := database.GetCategories()
+	categories, err := database.FetchAllCategories()
 	if err != nil {
 		fmt.Println("Error retrieving categories:", err)
 		response := map[string]string{"error": "Failed to retrieve categories"}
@@ -46,16 +51,7 @@ func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		return
 	}
 
-	count, err := database.GetCountFollowers(user.ID)
-	if err != nil {
-		fmt.Println("Error retrieving count of followers:", err)
-		response := map[string]string{"error": "Failed to retrieve count of followers"}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	users, err := database.GetFollowers(user.ID, count)
+	users, err := database.GetUserFollowers(user.UserID)
 	if err != nil {
 		log.Printf("Error retrieving users: %v", err)
 		response := map[string]string{"error": "Failed to retrieve users"}
@@ -79,9 +75,9 @@ func NewPostGet(w http.ResponseWriter, r *http.Request, user *structs.User) {
 func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	var post structs.Post
 	var err error
-	post.Title = r.FormValue("title")
-	post.Content = r.FormValue("content")
-	post.Privacy = r.FormValue("privacy")
+	post.Title = strings.TrimSpace(r.FormValue("title"))
+	post.Content = strings.TrimSpace(r.FormValue("content"))
+	post.PrivacyLevel = strings.TrimSpace(r.FormValue("privacy"))
 	post.CategoryID, err = strconv.ParseInt(r.FormValue("category"), 10, 64)
 	if err != nil {
 		fmt.Println("Invalid category", err)
@@ -91,7 +87,7 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		return
 	}
 
-	errors, valid := ValidatePost(post.Title, post.Content, post.Privacy)
+	errors, valid := ValidatePost(post.Title, post.Content, post.PrivacyLevel)
 	if !valid {
 		fmt.Println("Validation error", errors)
 		w.WriteHeader(http.StatusBadRequest)
@@ -125,7 +121,20 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		imagePath = newpath[1]
 	}
 
-	id, err := database.CreatePost(user.ID, post.GroupID, post.CategoryID, post.Title, post.Content, imagePath, post.Privacy)
+	users := []string{}
+	if post.PrivacyLevel == "private" {
+		users = strings.Split(r.FormValue("users"), ",")
+		if len(users) == 1 && users[0] == "" {
+			fmt.Println("No users provided for private post")
+			response := map[string]string{"error": "No users provided for private post"}
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+
+	ClientsMutex.Lock()
+	id, err := database.CreatePost(user.UserID, post.GroupID, post.CategoryID, post.Title, post.Content, imagePath, post.PrivacyLevel)
 	if err != nil {
 		fmt.Println("Failed to create post", err)
 		response := map[string]string{"error": "Failed to create post"}
@@ -133,9 +142,9 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+	ClientsMutex.Unlock()
 
-	if post.Privacy == "almost_private" {
-		users := strings.Split(r.FormValue("users"), ",")
+	if post.PrivacyLevel == "private" {
 		for _, usr := range users {
 			usr_id, err := strconv.ParseInt(usr, 10, 64)
 			if err != nil {
@@ -146,7 +155,7 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 				return
 			}
 
-			if _, err = database.GetUserById(usr_id); err != nil {
+			if _, err = database.FindUserByID(usr_id); err != nil {
 				fmt.Println("Invalid user", err)
 				response := map[string]string{"error": "Invalid user"}
 				w.WriteHeader(http.StatusBadRequest)
@@ -154,7 +163,7 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 				return
 			}
 
-			if err = database.Almost(usr_id, id); err != nil {
+			if err = database.AddAlmostPrivateUser(usr_id, id); err != nil {
 				fmt.Println("Failed to give authorizen to this user", err)
 				response := map[string]string{"error": "Failed to give authorizen to this user"}
 				w.WriteHeader(http.StatusInternalServerError)
@@ -164,7 +173,7 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 		}
 	}
 
-	category, err := database.GetCategoryById(post.CategoryID)
+	category, err := database.FetchCategoryByID(post.CategoryID)
 	if err != nil {
 		fmt.Println("Failed to retrieve category", err)
 		response := map[string]string{"error": "Failed to retrieve category"}
@@ -174,20 +183,20 @@ func NewPostPost(w http.ResponseWriter, r *http.Request, user *structs.User) {
 	}
 
 	newPost := structs.Post{
-		ID:                 id,
-		UserID:             user.ID,
-		Author:             user.Username,
+		PostID:             id,
+		AuthorID:           user.UserID,
+		AuthorName:         user.Username,
 		CategoryID:         post.CategoryID,
-		Category:           category.Name,
+		CategoryName:       category.Name,
 		CategoryColor:      category.Color,
 		CategoryBackground: category.Background,
 		Title:              html.EscapeString(post.Title),
 		Content:            html.EscapeString(post.Content),
-		Privacy:            post.Privacy,
-		Image:              post.Image,
+		PrivacyLevel:       post.PrivacyLevel,
+		ImageURL:           imagePath,
 		CreatedAt:          "Just Now",
-		TotalLikes:         0,
-		TotalComments:      0,
+		LikeCount:          0,
+		CommentCount:       0,
 		Comments:           nil,
 	}
 
@@ -232,7 +241,7 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = database.GetGroupById(group_id); err != nil {
+	if _, err = database.GetGroupByID(group_id); err != nil {
 		fmt.Println("Failed to retrieve group", err)
 		response := map[string]string{"error": "Failed to retrieve group"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -240,7 +249,7 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := database.IsMemberGroup(group_id, user.ID)
+	member, err := database.IsUserGroupMember(user.UserID, group_id)
 	if err != nil {
 		fmt.Println("Failed to check if user is a member", err)
 		response := map[string]string{"error": "Failed to check if user is a member"}
@@ -264,7 +273,7 @@ func CreatePostGroupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func NewPostGroupGet(w http.ResponseWriter, r *http.Request) {
-	categories, err := database.GetCategories()
+	categories, err := database.FetchAllCategories()
 	if err != nil {
 		log.Printf("Error retrieving categories: %v", err)
 		response := map[string]string{"error": "Failed to retrieve categories"}
@@ -272,15 +281,22 @@ func NewPostGroupGet(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
+	data := struct {
+		Categories []structs.Category
+	}{
+		Categories: categories,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(categories)
+	json.NewEncoder(w).Encode(data)
 }
 
 func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User, group_id int64) {
 	var post structs.Post
 	var err error
-	post.Title = r.FormValue("title")
-	post.Content = r.FormValue("content")
+	post.Title = strings.TrimSpace(r.FormValue("title"))
+	post.Content = strings.TrimSpace(r.FormValue("content"))
 	post.GroupID = group_id
 	post.CategoryID, err = strconv.ParseInt(r.FormValue("category"), 10, 64)
 	if err != nil {
@@ -290,7 +306,7 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	group, err := database.GetGroupById(post.GroupID)
+	group, err := database.GetGroupByID(post.GroupID)
 	if err != nil {
 		fmt.Println("Failed to retrieve group", err)
 		response := map[string]string{"error": "Failed to retrieve groups"}
@@ -299,7 +315,7 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 		return
 	}
 
-	errors, valid := ValidatePost(post.Title, post.Content, group.Privacy)
+	errors, valid := ValidatePost(post.Title, post.Content, group.PrivacyLevel)
 	if !valid {
 		fmt.Println("Validation error", errors)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -332,7 +348,7 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 		imagePath = newpath[1]
 	}
 
-	id, err := database.CreatePost(user.ID, post.GroupID, post.CategoryID, post.Title, post.Content, imagePath, "public")
+	id, err := database.CreatePost(user.UserID, post.GroupID, post.CategoryID, post.Title, post.Content, imagePath, "public")
 	if err != nil {
 		fmt.Println("Failed to create post", err)
 		response := map[string]string{"error": "Failed to create post"}
@@ -341,7 +357,7 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 		return
 	}
 
-	category, err := database.GetCategoryById(post.CategoryID)
+	category, err := database.FetchCategoryByID(post.CategoryID)
 	if err != nil {
 		fmt.Println("Failed to retrieve category", err)
 		response := map[string]string{"error": "Failed to retrieve category"}
@@ -351,22 +367,22 @@ func NewPostGroupPost(w http.ResponseWriter, r *http.Request, user *structs.User
 	}
 
 	newPost := structs.Post{
-		ID:                 id,
-		UserID:             user.ID,
-		Author:             user.Username,
+		PostID:             id,
+		AuthorID:           user.UserID,
+		AuthorName:         user.Username,
 		GroupName:          group.Name,
-		GroupID:            group.ID,
+		GroupID:            group.GroupID,
 		CategoryID:         post.CategoryID,
-		Category:           category.Name,
+		CategoryName:       category.Name,
 		CategoryColor:      category.Color,
 		CategoryBackground: category.Background,
 		Title:              html.EscapeString(post.Title),
 		Content:            html.EscapeString(post.Content),
-		Image:              post.Image,
+		ImageURL:           post.ImageURL,
 		CreatedAt:          "Just Now",
-		Privacy:            group.Privacy,
-		TotalLikes:         0,
-		TotalComments:      0,
+		PrivacyLevel:       group.PrivacyLevel,
+		LikeCount:          0,
+		CommentCount:       0,
 		Comments:           nil,
 	}
 
@@ -401,16 +417,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group_id, err := strconv.ParseInt(r.URL.Query().Get("group_id"), 10, 64)
-	if err != nil {
-		fmt.Println("Invalid group ID", err)
-		response := map[string]string{"error": "Invalid group ID"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	post, err := database.GetPost(user.ID, post_id, group_id)
+	post, err := database.GetPost(user.UserID, post_id)
 	if err != nil {
 		fmt.Println("Failed to retrieve post", err)
 		response := map[string]string{"error": "Failed to retrieve post"}
@@ -420,7 +427,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if post.GroupID != 0 {
-		group, err := database.GetGroupById(group_id)
+		group, err := database.GetGroupByID(post.GroupID)
 		if err != nil {
 			fmt.Println("Failed to retrieve group", err)
 			response := map[string]string{"error": "Failed to retrieve groups"}
@@ -429,8 +436,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if group.Privacy == "private" {
-			if member, err := database.IsMemberGroup(user.ID, post.GroupID); err != nil || !member {
+		if group.PrivacyLevel == "private" {
+			if member, err := database.IsUserGroupMember(user.UserID, post.GroupID); err != nil || !member {
 				fmt.Println("Failed to check if user is member of group", err)
 				response := map[string]string{"error": "Failed to check if user is member of group"}
 				w.WriteHeader(http.StatusInternalServerError)
@@ -438,16 +445,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	} else if (post.Privacy == "private" || post.Privacy == "almost_private") && post.Author != user.Username {
-		if followed, err := database.IsFollowed(user.ID, post.UserID); err != nil || !followed {
+	} else if (post.PrivacyLevel == "almost_private" || post.PrivacyLevel == "private") && post.AuthorName != user.Username {
+		if followed, err := database.IsUserFollowing(user.UserID, post.AuthorID); err != nil || !followed {
 			fmt.Println("Failed to check if user is following author", err)
 			response := map[string]string{"error": "You are not authorized to view this post"}
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(response)
 			return
 		}
-		if post.Privacy == "almost_private" {
-			if authorized, err := database.IsAuthorized(user.ID, post_id); err != nil || !authorized {
+		if post.PrivacyLevel == "private" {
+			if authorized, err := database.IsAuthorized(user.UserID, post_id); err != nil || !authorized {
 				fmt.Println("Failed to check if user is authorized", err)
 				response := map[string]string{"error": "You are not authorized to view this post"}
 				w.WriteHeader(http.StatusUnauthorized)
@@ -457,7 +464,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	post.TotalSaves, err = database.CountSaves(post_id, group_id)
+	post.SaveCount, err = database.CountSaves(post_id, post.GroupID)
 	if err != nil {
 		fmt.Println("Failed to count saves", err)
 		response := map[string]string{"error": "Failed to count saves"}
@@ -466,16 +473,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
-	if err != nil {
-		fmt.Println("Invalid offset", err)
-		response := map[string]string{"error": "Invalid offset"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	post.Comments, err = database.GetPostComments(post_id, post.GroupID, offset)
+	post.Comments, err = database.FetchPostComments(post_id)
 	if err != nil {
 		fmt.Println("Failed to retrieve comments", err)
 		response := map[string]string{"error": "Failed to retrieve comments"}
@@ -515,16 +513,7 @@ func GetPostsByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
-	if err != nil {
-		fmt.Println("Invalid offset", err)
-		response := map[string]string{"error": "Invalid offset"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	posts, err := database.GetPostsByCategory(category_id, user.ID, offset)
+	posts, err := database.GetPostsByCategory(category_id, user.UserID)
 	if err != nil {
 		fmt.Println("Failed to retrieve posts", err)
 		response := map[string]string{"error": "Failed to retrieve posts"}
@@ -536,7 +525,7 @@ func GetPostsByCategory(w http.ResponseWriter, r *http.Request) {
 	var posts_category []structs.Post
 	for i := range posts {
 		if posts[i].GroupID != 0 {
-			group, err := database.GetGroupById(posts[i].GroupID)
+			group, err := database.GetGroupByID(posts[i].GroupID)
 			if err != nil {
 				fmt.Println("Failed to retrieve group", err)
 				response := map[string]string{"error": "Failed to retrieve groups"}
@@ -545,23 +534,23 @@ func GetPostsByCategory(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if group.Privacy == "private" {
-				if member, err := database.IsMemberGroup(user.ID, posts[i].GroupID); err != nil || !member {
+			if group.PrivacyLevel == "private" {
+				if member, err := database.IsUserGroupMember(user.UserID, posts[i].GroupID); err != nil || !member {
 					continue
 				}
 			}
 
-		} else if (posts[i].Privacy == "private" || posts[i].Privacy == "almost_private") && posts[i].Author != user.Username {
-			if followed, err := database.IsFollowed(user.ID, posts[i].UserID); err != nil || !followed {
+		} else if (posts[i].PrivacyLevel == "almost_private" || posts[i].PrivacyLevel == "private") && posts[i].AuthorName != user.Username {
+			if followed, err := database.IsUserFollowing(user.UserID, posts[i].AuthorID); err != nil || !followed {
 				continue
 			}
-			if posts[i].Privacy == "almost_private" {
-				if authorized, err := database.IsAuthorized(user.ID, posts[i].ID); err != nil || !authorized {
+			if posts[i].PrivacyLevel == "private" {
+				if authorized, err := database.IsAuthorized(user.UserID, posts[i].PostID); err != nil || !authorized {
 					continue
 				}
 			}
 		}
-		posts[i].TotalSaves, err = database.CountSaves(posts[i].ID, posts[i].GroupID)
+		posts[i].SaveCount, err = database.CountSaves(posts[i].PostID, posts[i].GroupID)
 		if err != nil {
 			fmt.Println("Failed to count saves", err)
 			response := map[string]string{"error": "Failed to count saves"}
@@ -594,9 +583,9 @@ func ValidatePost(title, content, privacy string) (map[string]string, bool) {
 	}
 
 	if privacy == "" {
-		errors["privacy"] = "Privacy is required"
-	} else if privacy != "public" && privacy != "private" && privacy != "almost_private" {
-		errors["privacy"] = "Privacy must be public, private, or almost_private"
+		errors["privacy"] = "PrivacyLevel is required"
+	} else if privacy != "public" && privacy != "almost_private" && privacy != "private" {
+		errors["privacy"] = "PrivacyLevel must be public, almost_private, or private"
 	}
 
 	if len(errors) > 0 {

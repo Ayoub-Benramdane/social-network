@@ -4,206 +4,210 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	structs "social-network/data"
 	"social-network/database"
-	"strconv"
 )
 
 func SaveHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		fmt.Println("Method not allowed", r.Method)
-		response := map[string]string{"error": "Method not allowed"}
+		resp := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	if !CheckLastActionTime(w, r, "saves") {
+		return
+	}
+
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
+		resp := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	var post structs.Post
-	err = json.NewDecoder(r.Body).Decode(&post)
+	var requestPost structs.Post
+	err = json.NewDecoder(r.Body).Decode(&requestPost)
 	if err != nil {
 		fmt.Println("Invalid request body", err)
-		response := map[string]string{"error": "Invalid request body"}
+		resp := map[string]string{"error": "Invalid request body"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	var group structs.Group
-	if post.GroupID != 0 {
-		group, err = database.GetGroupById(int64(post.GroupID))
+	var relatedGroup structs.Group
+	if requestPost.GroupID != 0 {
+		relatedGroup, err = database.GetGroupByID(int64(requestPost.GroupID))
 		if err != nil {
 			fmt.Println("Failed to retrieve group", err)
-			response := map[string]string{"error": "Failed to retrieve groups"}
+			resp := map[string]string{"error": "Failed to retrieve groups"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
 
-	post, err = database.GetPost(user.ID, post.ID, post.GroupID)
+	fullPost, err := database.GetPost(currentUser.UserID, requestPost.PostID)
 	if err != nil {
 		fmt.Println("Failed to retrieve post", err)
-		response := map[string]string{"error": "Failed to retrieve post"}
+		resp := map[string]string{"error": "Failed to retrieve post"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	if post.GroupID != 0 {
-		if group.Privacy == "private" {
-			if member, err := database.IsMemberGroup(user.ID, post.GroupID); err != nil || !member {
+	if fullPost.GroupID != 0 {
+		if relatedGroup.PrivacyLevel == "private" {
+			isMember, err := database.IsUserGroupMember(currentUser.UserID, fullPost.GroupID)
+			if err != nil || !isMember {
 				fmt.Println("Failed to check if user is a member", err)
-				response := map[string]string{"error": "Failed to check if user is a member"}
+				resp := map[string]string{"error": "Failed to check if user is a member"}
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(response)
+				json.NewEncoder(w).Encode(resp)
 				return
 			}
 		}
-	} else if (post.Privacy == "private" || post.Privacy == "almost_private") && post.Author != user.Username {
-		if followed, err := database.IsFollowed(user.ID, post.UserID); err != nil || !followed {
+	} else if (fullPost.PrivacyLevel == "almost_private" || fullPost.PrivacyLevel == "private") &&
+		fullPost.AuthorName != currentUser.Username {
+
+		isFollowing, err := database.IsUserFollowing(currentUser.UserID, fullPost.AuthorID)
+		if err != nil || !isFollowing {
 			fmt.Println("You are not authorized to view this post", err)
-			response := map[string]string{"error": "You are not authorized to view this post"}
+			resp := map[string]string{"error": "You are not authorized to view this post"}
 			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
-		if post.Privacy == "almost_private" {
-			if authorized, err := database.IsAuthorized(user.ID, post.ID); err != nil || !authorized {
+
+		if fullPost.PrivacyLevel == "private" {
+			isAuthorized, err := database.IsAuthorized(currentUser.UserID, fullPost.PostID)
+			if err != nil || !isAuthorized {
 				fmt.Println("You are not authorized to view this post", err)
-				response := map[string]string{"error": "You are not authorized to view this post"}
+				resp := map[string]string{"error": "You are not authorized to view this post"}
 				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(response)
+				json.NewEncoder(w).Encode(resp)
 				return
 			}
 		}
 	}
 
-	isSaved, err := database.IsSaved(user.ID, post.ID, post.GroupID)
+	alreadySaved, err := database.IsSaved(currentUser.UserID, fullPost.PostID)
 	if err != nil {
 		fmt.Println("Failed to check if post is saved", err)
-		response := map[string]string{"error": "Failed to check if post is saved"}
+		resp := map[string]string{"error": "Failed to check if post is saved"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	if !isSaved {
-		if err := database.SavePost(user.ID, post.ID, post.GroupID); err != nil {
+	if !alreadySaved {
+		if err := database.SavePost(currentUser.UserID, fullPost.PostID, fullPost.GroupID); err != nil {
 			fmt.Println("Failed to save post", err)
-			response := map[string]string{"error": "Failed to save post"}
+			resp := map[string]string{"error": "Failed to save post"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 
-		if err := database.CreateNotification(user.ID, post.UserID, post.ID, post.GroupID, 0, "save"); err != nil {
-			fmt.Println("Failed to create notification", err)
-			response := map[string]string{"error": "Failed to create notification"}
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
-			return
+		if currentUser.UserID != fullPost.AuthorID {
+			if err := database.CreateNotification(currentUser.UserID, fullPost.AuthorID, fullPost.PostID, fullPost.GroupID, 0, "save"); err != nil {
+				fmt.Println("Failed to create notification", err)
+				resp := map[string]string{"error": "Failed to create notification"}
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(resp)
+				return
+			}
 		}
 	} else {
-		if err := database.UnsavePost(user.ID, post.ID, post.GroupID); err != nil {
+		if err := database.UnsavePost(currentUser.UserID, fullPost.PostID, fullPost.GroupID); err != nil {
 			fmt.Println("Failed to unsave post", err)
-			response := map[string]string{"error": "Failed to unsave post"}
+			resp := map[string]string{"error": "Failed to unsave post"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 
-		if err := database.DeleteNotification(user.ID, post.UserID, post.ID, post.GroupID, 0, "save"); err != nil {
+		if err := database.DeleteNotification(currentUser.UserID, fullPost.AuthorID, fullPost.PostID, fullPost.GroupID, 0, "save"); err != nil {
 			fmt.Println("Failed to delete notification", err)
-			response := map[string]string{"error": "Failed to delete notification"}
+			resp := map[string]string{"error": "Failed to delete notification"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
-	
-	post.IsSaved = !isSaved
-	post.TotalSaves, err = database.CountSaves(post.ID, post.GroupID)
+
+	fullPost.IsSaved = !alreadySaved
+	fullPost.SaveCount, err = database.CountSaves(fullPost.PostID, fullPost.GroupID)
 	if err != nil {
 		fmt.Println("Failed to count saves", err)
-		response := map[string]string{"error": "Failed to count saves"}
+		resp := map[string]string{"error": "Failed to count saves"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(fullPost)
 }
 
 func GetSavedPostsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		fmt.Println("Method not allowed", r.Method)
-		response := map[string]string{"error": "Method not allowed"}
+		resp := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
+		resp := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	Type := r.URL.Query().Get("type")
-	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
-	if err != nil {
-		fmt.Println("Invalid offset parameter", err)
-		response := map[string]string{"error": "Invalid offset parameter"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
+	requestType := r.URL.Query().Get("type")
 
-	var posts []structs.Post
-	if Type == "post" {
-		posts, err = database.GetSavedPosts(user.ID, 0, offset)
-	} else if Type == "group" {
-		posts, err = database.GetSavedPosts(user.ID, 1, offset)
+	var savedPosts []structs.Post
+	if requestType == "post" {
+		savedPosts, err = database.GetSavedPosts(currentUser.UserID, 0)
+	} else if requestType == "group" {
+		savedPosts, err = database.GetSavedPosts(currentUser.UserID, 1)
 	} else {
 		fmt.Println("Invalid type parameter")
-		response := map[string]string{"error": "Invalid type parameter"}
+		resp := map[string]string{"error": "Invalid type parameter"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	if err != nil {
 		fmt.Println("Failed to retrieve saved posts", err)
-		response := map[string]string{"error": "Failed to retrieve saved posts"}
+		resp := map[string]string{"error": "Failed to retrieve saved posts"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	for i := 0; i < len(posts); i++ {
-		posts[i].TotalSaves, err = database.CountSaves(posts[i].ID, posts[i].GroupID)
+	for i := 0; i < len(savedPosts); i++ {
+		savedPosts[i].SaveCount, err = database.CountSaves(savedPosts[i].PostID, savedPosts[i].GroupID)
 		if err != nil {
 			fmt.Println("Failed to count saves", err)
-			response := map[string]string{"error": "Failed to count saves"}
+			resp := map[string]string{"error": "Failed to count saves"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(posts)
+	json.NewEncoder(w).Encode(savedPosts)
 }
