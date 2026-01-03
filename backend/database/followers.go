@@ -4,114 +4,212 @@ import (
 	structs "social-network/data"
 )
 
-func AddFollower(follower_id, following_id int64) error {
-	_, err := DB.Exec("INSERT INTO follows (follower_id, following_id) VALUES (?, ?)", follower_id, following_id)
+func FollowUser(followerID, followingID int64) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	_, err := Database.Exec(
+		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)",
+		followerID, followingID,
+	)
 	return err
 }
 
-func RemoveFollower(follower_id, following_id int64) error {
-	_, err := DB.Exec("DELETE FROM follows WHERE follower_id = ? AND following_id = ?", follower_id, following_id)
+func UnfollowUser(followerID, followingID int64) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	_, err := Database.Exec(
+		"DELETE FROM followers WHERE follower_id = ? AND followed_id = ?",
+		followerID, followingID,
+	)
 	return err
 }
 
-func GetFollowers(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = ? LIMIT ? OFFSET ?", user_id, 10, offset)
+func GetUserFollowers(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT u.id, u.username, u.avatar
+		 FROM users u
+		 JOIN followers f ON u.id = f.follower_id
+		 WHERE f.followed_id = ?`,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var followers []structs.User
+
 	for rows.Next() {
-		var follower structs.User
-		err = rows.Scan(&follower.ID, &follower.Username, &follower.Avatar)
-		if err != nil {
+		var user structs.User
+		if err := rows.Scan(&user.UserID, &user.Username, &user.AvatarURL); err != nil {
 			return nil, err
 		}
-		followers = append(followers, follower)
+		followers = append(followers, user)
 	}
+
 	return followers, nil
 }
 
-func GetFollowing(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = ? LIMIT ? OFFSET ?", user_id, 10, offset)
+func GetUserFollowerIDs(userID int64) ([]int64, error) {
+	rows, err := Database.Query(
+		`SELECT u.id
+		 FROM users u
+		 JOIN followers f ON u.id = f.follower_id
+		 WHERE f.followed_id = ?`,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var following []structs.User
+
+	var followerIDs []int64
+
 	for rows.Next() {
-		var follower structs.User
-		err = rows.Scan(&follower.ID, &follower.Username, &follower.Avatar)
-		if err != nil {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		following = append(following, follower)
+		followerIDs = append(followerIDs, id)
 	}
+
+	return followerIDs, nil
+}
+
+func GetUserFollowing(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT u.id, u.username, u.avatar
+		 FROM users u
+		 JOIN followers f ON u.id = f.followed_id
+		 WHERE f.follower_id = ?`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var following []structs.User
+
+	for rows.Next() {
+		var user structs.User
+		if err := rows.Scan(&user.UserID, &user.Username, &user.AvatarURL); err != nil {
+			return nil, err
+		}
+		following = append(following, user)
+	}
+
 	return following, nil
 }
 
-func GetNotFollowing(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT id, username, avatar, lastname, firstname FROM users WHERE id NOT IN (SELECT following_id FROM follows WHERE follower_id = ?) AND id NOT IN (SELECT recipient_id FROM invitations WHERE invited_id = ?) AND id != ? LIMIT ? OFFSET ?", user_id, user_id, user_id, 10, offset)
+func CountUserFollowing(userID int64) (int64, error) {
+	var count int64
+	err := Database.QueryRow(
+		"SELECT COUNT(*) FROM followers WHERE follower_id = ?",
+		userID,
+	).Scan(&count)
+	return count, err
+}
+
+func GetSuggestedUsers(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT id, username, avatar, lastname, firstname
+		 FROM users
+		 WHERE id NOT IN (
+			 SELECT followed_id FROM followers WHERE follower_id = ?
+		 )
+		 AND id NOT IN (
+			 SELECT recipient_id FROM invitations WHERE invited_id = ?
+		 )
+		 AND id != ?`,
+		userID, userID, userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var notFollowing []structs.User
+
+	var users []structs.User
+
 	for rows.Next() {
 		var user structs.User
-		err = rows.Scan(&user.ID, &user.Username, &user.Avatar, &user.LastName, &user.FirstName)
-		if err != nil {
+		if err := rows.Scan(&user.UserID, &user.Username, &user.AvatarURL, &user.LastName, &user.FirstName); err != nil {
 			return nil, err
 		}
-		notFollowing = append(notFollowing, user)
+		users = append(users, user)
 	}
-	return notFollowing, nil
+
+	return users, nil
 }
 
-func GetSuggestedUsers(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT id, username, avatar, lastname, firstname FROM users WHERE id NOT IN (SELECT following_id FROM follows WHERE follower_id = ?) AND id NOT IN (SELECT recipient_id FROM invitations WHERE invited_id = ?) AND id != ? LIMIT ? OFFSET ?", user_id, user_id, user_id, 10, offset)
+func GetReceivedFollowRequests(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT u.id, u.username, u.avatar
+		 FROM users u
+		 JOIN invitations i ON u.id = i.invited_id
+		 WHERE i.recipient_id = ?`,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var suggestedUsers []structs.User
+
+	var users []structs.User
+
 	for rows.Next() {
 		var user structs.User
-		err = rows.Scan(&user.ID, &user.Username, &user.Avatar, &user.LastName, &user.FirstName)
-		if err != nil {
+		if err := rows.Scan(&user.UserID, &user.Username, &user.AvatarURL); err != nil {
 			return nil, err
 		}
-		suggestedUsers = append(suggestedUsers, user)
+		users = append(users, user)
 	}
-	return suggestedUsers, nil
+
+	return users, nil
 }
 
-func GetPendingUsers(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT u.id, u.username, u.avatar FROM users u JOIN invitations i ON u.id = i.invited_id WHERE i.recipient_id = ? LIMIT ? OFFSET ?", user_id, 10, offset)
+func GetPendingFollowRequests(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT u.id, u.username, u.avatar
+		 FROM users u
+		 JOIN invitations i ON u.id = i.recipient_id
+		 WHERE i.group_id = 0 AND i.invited_id = ?`,
+		userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var pendingUsers []structs.User
+
+	var users []structs.User
+
 	for rows.Next() {
 		var user structs.User
-		err = rows.Scan(&user.ID, &user.Username, &user.Avatar)
-		if err != nil {
+		if err := rows.Scan(&user.UserID, &user.Username, &user.AvatarURL); err != nil {
 			return nil, err
 		}
-		pendingUsers = append(pendingUsers, user)
+		users = append(users, user)
 	}
-	return pendingUsers, nil
+
+	return users, nil
 }
 
-func IsFollowed(follower_id, following_id int64) (bool, error) {
+func IsUserFollowing(followerID, followingID int64) (bool, error) {
 	var count int
-	err := DB.QueryRow("SELECT COUNT(*) FROM follows WHERE follower_id = ? AND following_id = ?", follower_id, following_id).Scan(&count)
+	err := Database.QueryRow(
+		"SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ?",
+		followerID, followingID,
+	).Scan(&count)
 	return count > 0, err
 }
 
-func GetCountFollowers(user_id int64) (int64, error) {
+func CountUserFollowers(userID int64) (int64, error) {
 	var count int64
-	err := DB.QueryRow("SELECT COUNT(*) FROM follows WHERE following_id = ?", user_id).Scan(&count)
+	err := Database.QueryRow(
+		"SELECT COUNT(*) FROM followers WHERE followed_id = ?",
+		userID,
+	).Scan(&count)
 	return count, err
 }

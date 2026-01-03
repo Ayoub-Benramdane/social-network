@@ -4,169 +4,164 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
 	structs "social-network/data"
 	"social-network/database"
-	"strconv"
 )
 
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		fmt.Println("Method not allowed", r.Method)
-		response := map[string]string{"error": "Method not allowed"}
+		resp := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
+		resp := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user_id, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
+	profileUserID, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	if err != nil {
 		fmt.Println("Error parsing user ID:", err)
-		response := map[string]string{"error": "Invalid user ID"}
+		resp := map[string]string{"error": "Invalid user ID"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
-
 	}
 
-	info, err := database.GetProfileInfo(user_id)
+	profileInfo, err := database.GetProfileInfo(profileUserID, nil)
 	if err != nil {
 		fmt.Println("Error retrieving profile:", err)
-		response := map[string]string{"error": "Failed to retrieve profile"}
+		resp := map[string]string{"error": "Failed to retrieve profile"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	if user_id == user.ID {
-		info.Role = "owner"
+	if profileUserID == currentUser.UserID {
+		profileInfo.Role = "owner"
 	} else {
-		info.Role = "user"
+		profileInfo.Role = "user"
 	}
 
-	info.IsFollowing, err = database.IsFollowed(user.ID, user_id)
+	profileInfo.IsFollowing, err = database.IsUserFollowing(currentUser.UserID, profileUserID)
 	if err != nil {
 		fmt.Println("Error checking follow status:", err)
-		response := map[string]string{"error": "Failed to retrieve followings"}
+		resp := map[string]string{"error": "Failed to retrieve followings"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	info.IsFollower, err = database.IsFollowed(user_id, user.ID)
+	profileInfo.IsFollower, err = database.IsUserFollowing(profileUserID, currentUser.UserID)
 	if err != nil {
 		fmt.Println("Error checking follow status:", err)
-		response := map[string]string{"error": "Failed to retrieve followers"}
+		resp := map[string]string{"error": "Failed to retrieve followers"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	info.IsPending, err = database.CheckInvitation(user_id, user.ID)
+	profileInfo.IsPending, err = database.InvitationExists(currentUser.UserID, profileUserID, 0)
 	if err != nil {
 		fmt.Println("Error checking invitation:", err)
-		response := map[string]string{"error": "Failed to retrieve invitation"}
+		resp := map[string]string{"error": "Failed to retrieve invitation"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
+	}
+
+	if profileInfo.PrivacyLevel == "public" || profileInfo.IsFollowing || profileUserID == currentUser.UserID {
+		ClientsMutex.Lock()
+		profileInfo.IsOnline = structs.ConnectedClients[profileUserID] != nil
+		ClientsMutex.Unlock()
+	}
+
+	if profileInfo.IsPending {
+		profileInfo.AccountType = "Pending"
+	} else if profileInfo.IsFollowing {
+		profileInfo.AccountType = "Unfollow"
+	} else if profileInfo.IsFollower {
+		profileInfo.AccountType = "Follow back"
+	} else {
+		profileInfo.AccountType = "Follow"
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(info)
+	json.NewEncoder(w).Encode(profileInfo)
 }
 
 func ProfilePostsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		fmt.Println("Method not allowed", r.Method)
-		response := map[string]string{"error": "Method not allowed"}
+		resp := map[string]string{"error": "Method not allowed"}
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Failed to retrieve user", err)
-		response := map[string]string{"error": "Failed to retrieve user"}
+		resp := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	user_id, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
+	profileUserID, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	if err != nil {
 		fmt.Println("Error parsing user ID:", err)
-		response := map[string]string{"error": "Invalid user ID"}
+		resp := map[string]string{"error": "Invalid user ID"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-
-	}
-
-	offset, err := strconv.ParseInt(r.URL.Query().Get("offset"), 10, 64)
-	if err != nil {
-		fmt.Println("Error parsing offset:", err)
-		response := map[string]string{"error": "Invalid offset"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	info, err := database.GetProfileInfo(user_id)
+	profileInfo, err := database.GetProfileInfo(profileUserID, nil)
 	if err != nil {
 		fmt.Println("Error retrieving profile:", err)
-		response := map[string]string{"error": "Failed to retrieve profile"}
+		resp := map[string]string{"error": "Failed to retrieve profile"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	followed, err := database.IsFollowed(user.ID, user_id)
+	isFollowed, err := database.IsUserFollowing(currentUser.UserID, profileUserID)
 	if err != nil {
 		fmt.Println("Error checking follow status:", err)
-		response := map[string]string{"error": "Failed to retrieve followings"}
+		resp := map[string]string{"error": "Failed to retrieve followings"}
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	var posts []structs.Post
-	if followed || info.Privacy == "public" || user_id == user.ID {
-		posts, err = database.GetPostsByUser(user_id, user.ID, offset, followed)
+	var userPosts []structs.Post
+	if isFollowed || profileInfo.PrivacyLevel == "public" || profileUserID == currentUser.UserID {
+		userPosts, err = database.GetPostsByUser(profileUserID, currentUser.UserID, isFollowed)
 		if err != nil {
 			fmt.Println("Error retrieving posts:", err)
-			response := map[string]string{"error": "Failed to retrieve posts"}
+			resp := map[string]string{"error": "Failed to retrieve posts"}
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
 
-	for i := 0; i < len(posts); i++ {
-		posts[i].TotalSaves, err = database.CountSaves(posts[i].ID, posts[i].GroupID)
-		if err != nil {
-			fmt.Println("Failed to count saves", err)
-			response := map[string]string{"error": "Failed to count saves"}
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(response)
-			return
-		}
-	}
-
-	if user_id == user.ID {
-		info.Role = "owner"
+	if profileUserID == currentUser.UserID {
+		profileInfo.Role = "owner"
 	} else {
-		info.Role = "user"
+		profileInfo.Role = "user"
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(posts)
+	json.NewEncoder(w).Encode(userPosts)
 }

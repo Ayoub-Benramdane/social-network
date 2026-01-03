@@ -88,7 +88,6 @@ func GetProfileInfo(profileUserID int64, followedUsers []structs.User) (structs.
 func UpdateProfile(userID int64, username, firstName, lastName, bio, privacyLevel string) error {
 	mu.Lock()
 	defer mu.Unlock()
-
 	_, err := Database.Exec(`
 		UPDATE users SET username = ?, firstname = ?, lastname = ?, privacy = ?, about = ? WHERE id = ?
 	`, username, firstName, lastName, privacyLevel, bio, userID)
