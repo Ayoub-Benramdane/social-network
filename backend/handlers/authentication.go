@@ -28,8 +28,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var login structs.User
-	err := json.NewDecoder(r.Body).Decode(&login)
+	if !CheckLastActionTime(w, r, "users") {
+		return
+	}
+
+	var loginPayload structs.User
+	err := json.NewDecoder(r.Body).Decode(&loginPayload)
 	if err != nil {
 		fmt.Println("Error decoding JSON:", err)
 		response := map[string]string{"error": "Invalid request body"}
@@ -38,7 +42,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errors, valid := ValidateInput("", "", "", login.Email, login.Password, "", "", "", time.Now())
+	errors, valid := ValidateInput("", "", "", loginPayload.Email, loginPayload.Password, "", "", "", time.Now())
 	if !valid {
 		fmt.Println("Validation error:", errors)
 		w.WriteHeader(http.StatusBadRequest)
@@ -49,11 +53,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := database.GetUserByEmail(login.Email)
+	user, err := database.FindUserByEmail(loginPayload.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("Invalid email or password", err)
-			response := map[string]string{"error": "Invalid email or password"}
+			fmt.Println("Invalid email", err)
+			response := map[string]string{"email": "Invalid email"}
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(response)
 		} else {
@@ -65,9 +69,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(login.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginPayload.Password)); err != nil {
 		fmt.Println("Password is incorrect")
-		response := map[string]string{"error": "Password is incorrect"}
+		response := map[string]string{"password": "Password is incorrect"}
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(response)
 		return
@@ -82,7 +86,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.UpdateSession(login.Email, sessionToken); err != nil {
+	if err := database.UpdateUserSession(loginPayload.Email, sessionToken); err != nil {
 		log.Printf("Error updating session token: %v", err)
 		response := map[string]string{"error": "Failed to update session token"}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -100,13 +104,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
 
-	data := map[string]interface{}{
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"username":     user.Username,
 		"sessionToken": sessionToken.String(),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	})
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -118,21 +120,25 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var register structs.User
-	var err error
-	register.Type = r.FormValue("type")
-	register.Username = r.FormValue("username")
-	register.FirstName = r.FormValue("firstName")
-	register.LastName = r.FormValue("lastName")
-	register.Bio = r.FormValue("aboutMe")
-	register.Privacy = r.FormValue("privacy")
+	if !CheckLastActionTime(w, r, "users") {
+		return
+	}
 
-	if register.Type == "register" {
-		register.Email = r.FormValue("email")
-		register.Password = r.FormValue("password")
-		register.ConfirmPass = r.FormValue("confirmedPassword")
+	var userPayload structs.User
+	var err error
+	userPayload.AccountType = strings.TrimSpace(r.FormValue("type"))
+	userPayload.Username = strings.TrimSpace(r.FormValue("username"))
+	userPayload.FirstName = strings.TrimSpace(r.FormValue("firstName"))
+	userPayload.LastName = strings.TrimSpace(r.FormValue("lastName"))
+	userPayload.Bio = strings.TrimSpace(r.FormValue("aboutMe"))
+	userPayload.PrivacyLevel = strings.TrimSpace(r.FormValue("privacy"))
+
+	if userPayload.AccountType == "register" {
+		userPayload.Email = strings.TrimSpace(r.FormValue("email"))
+		userPayload.Password = strings.TrimSpace(r.FormValue("password"))
+		userPayload.PasswordConfirmation = strings.TrimSpace(r.FormValue("confirmedPassword"))
 		temp := r.FormValue("dateOfBirth")
-		register.DateOfBirth, err = time.Parse("2006-01-02", temp)
+		userPayload.BirthDate, err = time.Parse("2006-01-02", temp)
 		if err != nil {
 			fmt.Println("Error parsing date of birth:", err)
 			response := map[string]string{"error": "Error Parsing Date"}
@@ -141,7 +147,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		errors, valid := ValidateInput(register.Username, register.FirstName, register.LastName, register.Email, register.Password, register.ConfirmPass, register.Privacy, register.Bio, register.DateOfBirth)
+		errors, valid := ValidateInput(userPayload.Username, userPayload.FirstName, userPayload.LastName, userPayload.Email, userPayload.Password, userPayload.PasswordConfirmation, userPayload.PrivacyLevel, userPayload.Bio, userPayload.BirthDate)
 		if !valid {
 			fmt.Println("Validation error:", errors)
 			w.WriteHeader(http.StatusBadRequest)
@@ -152,16 +158,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var imagePath string
-		image, header, err := r.FormFile("avatar")
+		var avatarPath string
+		avatarFile, avatarHeader, err := r.FormFile("avatar")
 		if err != nil && err.Error() != "http: no such file" {
 			fmt.Println("Error retrieving image:", err)
 			response := map[string]string{"error": "Failed to retrieve image"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
 			return
-		} else if image != nil {
-			imagePath, err = SaveImage(image, header, "../frontend/public/avatars/")
+		} else if avatarFile != nil {
+			avatarPath, err = SaveImage(avatarFile, avatarHeader, "../frontend/public/avatars/")
 			if err != nil {
 				fmt.Println("Error saving image:", err)
 				response := map[string]string{"error": err.Error()}
@@ -169,22 +175,22 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				json.NewEncoder(w).Encode(response)
 				return
 			}
-			newpath := strings.Split(imagePath, "/public")
-			imagePath = newpath[1]
+			newpath := strings.Split(avatarPath, "/public")
+			avatarPath = newpath[1]
 		} else {
-			imagePath = "/inconnu/avatar.png"
+			avatarPath = "/inconnu/avatar.png"
 		}
 
 		var coverPath string
-		cover, header, err := r.FormFile("cover")
+		coverFile, coverHeader, err := r.FormFile("cover")
 		if err != nil && err.Error() != "http: no such file" {
 			fmt.Println("Error retrieving cover:", err)
 			response := map[string]string{"error": "Failed to retrieve cover"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
 			return
-		} else if cover != nil {
-			coverPath, err = SaveImage(cover, header, "../frontend/public/covers/")
+		} else if coverFile != nil {
+			coverPath, err = SaveImage(coverFile, coverHeader, "../frontend/public/covers/")
 			if err != nil {
 				fmt.Println("Error saving cover:", err)
 				response := map[string]string{"error": err.Error()}
@@ -198,10 +204,10 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			coverPath = "/inconnu/cover.jpg"
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(register.Password), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userPayload.Password), bcrypt.DefaultCost)
 		if err != nil {
 			fmt.Println("Error hashing password:", err)
-			response := map[string]string{"error": "Error hashing password"}
+			response := map[string]string{"password": "Error hashing password"}
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(response)
 			return
@@ -216,15 +222,15 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := database.RegisterUser(register.Username, register.FirstName, register.LastName, register.Email, register.Bio, imagePath, coverPath, register.Privacy, hashedPassword, register.DateOfBirth, sessionToken); err != nil {
+		if err := database.CreateUser(userPayload.Username, userPayload.FirstName, userPayload.LastName, userPayload.Email, userPayload.Bio, avatarPath, coverPath, userPayload.PrivacyLevel, hashedPassword, userPayload.BirthDate, sessionToken); err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
-				fmt.Println("Email already exists")
-				response := map[string]string{"error": "Email already exists"}
+				fmt.Println("Email alreadU(userPayload.Uy exists")
+				response := map[string]string{"email": "Email already exists"}
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(response)
 			} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
 				fmt.Println("Username already exists")
-				response := map[string]string{"error": "Username already exists"}
+				response := map[string]string{"username": "Username already exists"}
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(response)
 			} else {
@@ -235,8 +241,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-	} else if register.Type == "update" {
-		register.ID, err = strconv.ParseInt(r.FormValue("id"), 10, 64)
+	} else if userPayload.AccountType == "update" {
+		userPayload.UserID, err = strconv.ParseInt(r.FormValue("id"), 10, 64)
 		if err != nil {
 			fmt.Println("Error parsing ID:", err)
 			response := map[string]string{"error": "Error Parsing ID"}
@@ -244,16 +250,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(response)
 			return
 		}
-		if err := database.UpdateProfile(register.ID, register.Username, register.FirstName, register.LastName, register.Bio, register.Privacy); err != nil {
+		if err := database.UpdateProfile(userPayload.UserID, userPayload.Username, userPayload.FirstName, userPayload.LastName, userPayload.Bio, userPayload.PrivacyLevel); err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 				fmt.Println("Email already exists")
-				response := map[string]string{"error": "Email already exists"}
+				response := map[string]string{"email": "Email already exists"}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(response)
 			} else if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
 				fmt.Println("Username already exists")
-				response := map[string]string{"error": "Username already exists"}
+				response := map[string]string{"usename": "Username already exists"}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(response)
@@ -267,8 +273,17 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err := database.AcceptAllFriendInvitations(userPayload.UserID); err != nil {
+			log.Printf("Error accepting invitations: %v", err)
+			response := map[string]string{"error": "Failed to accept invitations"}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+
 		response := map[string]interface{}{
-			"user":    register,
+			"user":    userPayload,
 			"message": "Profile updated successfully!",
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -296,8 +311,8 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := GetUserFromSession(r)
-	if err != nil || user == nil {
+	currentUser, err := GetUserFromSession(r)
+	if err != nil || currentUser == nil {
 		fmt.Println("Error retrieving user:", err)
 		response := map[string]string{"error": "Failed to retrieve user"}
 		w.WriteHeader(http.StatusUnauthorized)
@@ -305,13 +320,15 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.DeleteSession(user.ID); err != nil {
+	ClientsMutex.Lock()
+	if err := database.ClearUserSession(currentUser.UserID); err != nil {
 		log.Printf("Error deleting session: %v", err)
 		response := map[string]string{"error": "Failed to delete session"}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+	ClientsMutex.Unlock()
 
 	http.SetCookie(w, &http.Cookie{
 		Name:   "session_token",
@@ -319,53 +336,57 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	})
 
-	response := map[string]string{"message": "Logout successful!", "username": user.Username}
+	response := map[string]string{"message": "Logout successful!", "username": currentUser.Username}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
-func ValidateInput(username, firstName, lastName, email, password, confirm_pass, privacy, aboutMe string, date time.Time) (map[string]string, bool) {
+func ValidateInput(username, firstName, lastName, email, password, confirmPassword, privacyLevel, aboutMe string, birthDate time.Time) (map[string]string, bool) {
+
 	errors := make(map[string]string)
-	const maxUsername = 10
-	const maxEmail = 30
-	const maxPassword = 20
+
+	const maxUsernameLength = 10
+	const maxEmailLength = 30
+	const maxPasswordLength = 20
 	const maxNameLength = 20
-	const maxAboutMe = 100
+	const maxAboutMeLength = 100
 
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+
 	if len(email) == 0 {
 		errors["email"] = "Email cannot be empty"
-	} else if len(email) > maxEmail {
-		errors["email"] = fmt.Sprintf("Email cannot be longer than %d characters.", maxEmail)
+	} else if len(email) > maxEmailLength {
+		errors["email"] = fmt.Sprintf("Email cannot be longer than %d characters.", maxEmailLength)
 	} else if !emailRegex.MatchString(email) {
 		errors["email"] = "Invalid email format"
 	}
 
-	if password != confirm_pass && username != "" {
+	if password != confirmPassword && username != "" {
 		errors["password"] = "Passwords do not match"
 	} else if len(password) < 8 {
 		errors["password"] = "Password must be at least 8 characters long"
-	} else if len(password) > maxPassword {
-		errors["password"] = fmt.Sprintf("Password cannot be longer than %d characters.", maxPassword)
+	} else if len(password) > maxPasswordLength {
+		errors["password"] = fmt.Sprintf("Password cannot be longer than %d characters.", maxPasswordLength)
 	} else {
-		hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
-		hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
+		hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+		hasLowercase := regexp.MustCompile(`[a-z]`).MatchString(password)
 		hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
-		hasSpecial := regexp.MustCompile(`[\W_]`).MatchString(password)
+		hasSpecialChar := regexp.MustCompile(`[\W_]`).MatchString(password)
 
-		if !hasUpper {
+		if !hasUppercase {
 			errors["password"] = "Password must include at least one uppercase letter"
-		} else if !hasLower {
+		} else if !hasLowercase {
 			errors["password"] = "Password must include at least one lowercase letter"
 		} else if !hasDigit {
 			errors["password"] = "Password must include at least one digit"
-		} else if !hasSpecial {
+		} else if !hasSpecialChar {
 			errors["password"] = "Password must include at least one special character"
 		}
 	}
 
 	if username != "" {
+
 		if len(firstName) == 0 {
 			errors["first_name"] = "First name cannot be empty"
 		} else if len(firstName) > maxNameLength {
@@ -384,28 +405,29 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 
 		if len(username) == 0 {
 			errors["username"] = "Username cannot be empty"
-		} else if len(username) > maxUsername {
-			errors["username"] = fmt.Sprintf("Username cannot be longer than %d characters.", maxUsername)
+		} else if len(username) > maxUsernameLength {
+			errors["username"] = fmt.Sprintf("Username cannot be longer than %d characters.", maxUsernameLength)
 		}
 
-		if date.IsZero() {
-			errors["date"] = "Date cannot be empty"
+		if birthDate.IsZero() {
+			errors["dateOfBirth"] = "Date cannot be empty"
 		} else {
-			now := time.Now()
-			year1900 := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+			age := time.Since(birthDate).Hours() / 24 / 365.3
+			if age < 18 {
+				errors["dateOfBirth"] = "You must be at least 18 years old"
+			}
 
-			if date.After(now) {
-				errors["date"] = "Date cannot be in the future"
-			} else if date.Before(year1900) {
-				errors["date"] = "Date cannot be before the year 1900"
+			minAllowedDate := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC)
+			if birthDate.Before(minAllowedDate) {
+				errors["dateOfBirth"] = "Date cannot be before the year 1900"
 			}
 		}
 
-		if len(aboutMe) > maxAboutMe {
-			errors["about_me"] = fmt.Sprintf("About me cannot be longer than %d characters.", maxAboutMe)
+		if len(aboutMe) > maxAboutMeLength {
+			errors["about_me"] = fmt.Sprintf("About me cannot be longer than %d characters.", maxAboutMeLength)
 		}
 
-		if privacy != "public" && privacy != "private" {
+		if privacyLevel != "public" && privacyLevel != "private" {
 			errors["privacy"] = "Privacy must be either 'public' or 'private'"
 		}
 	}
@@ -414,6 +436,7 @@ func ValidateInput(username, firstName, lastName, email, password, confirm_pass,
 		log.Println(errors)
 		return errors, false
 	}
+
 	return nil, true
 }
 

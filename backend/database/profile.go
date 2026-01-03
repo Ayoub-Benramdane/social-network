@@ -4,41 +4,94 @@ import (
 	structs "social-network/data"
 )
 
-func GetProfileInfo(user_id int64) (structs.User, error) {
-	var user structs.User
-	err := DB.QueryRow("SELECT id, username, firstname, lastname, email, avatar, cover, about, privacy, date_of_birth, created_at, followers, following FROM users WHERE id = ?", user_id).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Email, &user.Avatar, &user.Cover, &user.Bio, &user.Privacy, &user.DateOfBirth, &user.CreatedAt, &user.TotalFollowers, &user.TotalFollowing)
+func GetProfileInfo(profileUserID int64, followedUsers []structs.User) (structs.User, error) {
+	var profile structs.User
+
+	err := Database.QueryRow(`
+		SELECT id, username, firstname, lastname, email,
+		       avatar, cover, about, privacy,
+		       date_of_birth, created_at,
+		       followers, following
+		FROM users
+		WHERE id = ?
+	`, profileUserID).Scan(&profile.UserID, &profile.Username, &profile.FirstName, &profile.LastName,
+		&profile.Email, &profile.AvatarURL, &profile.CoverURL, &profile.Bio, &profile.PrivacyLevel,
+		&profile.BirthDate, &profile.CreatedAt, &profile.FollowerCount, &profile.FollowingCount)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.Post.TotalPosts, err = GetCountUserPosts(user_id, 0)
+
+	profile.PostCount, err = GetCountUserPosts(profileUserID, 0)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.TotalGroups, err = GetCountUserGroups(user_id)
+
+	profile.GroupCount, err = CountUserGroups(profileUserID)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.TotalEvents, err = GetCountUserEvents(user_id)
+
+	profile.EventCount, err = CountUserEvents(profileUserID)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.Post.TotalLikes, err = GetCountUserLikes(user_id)
+
+	profile.LikeCount, err = CountLikesByUser(profileUserID)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.Post.TotalComments, err = GetCountUserComments(user_id)
+
+	profile.CommentCount, err = CountUserComments(profileUserID)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.Message.TotalChatsMessages, user.Message.TotalGroupsMessages, err = GetCountUserMessages(user_id)
+
+	userGroups, err := GetUserGroups(profile)
 	if err != nil {
-		return user, err
+		return profile, err
 	}
-	user.Message.TotalMessages = user.Message.TotalChatsMessages + user.Message.TotalGroupsMessages
-	return user, err
+
+	profile.ChatMessageCount, profile.GroupMessageCount, err =
+		CountUserUnreadMessages(profileUserID, userGroups)
+	if err != nil {
+		return profile, err
+	}
+
+	profile.FollowerCount, err = CountUserFollowers(profileUserID)
+	if err != nil {
+		return profile, err
+	}
+
+	profile.FollowingCount, err = CountUserFollowing(profileUserID)
+	if err != nil {
+		return profile, err
+	}
+
+	profile.MessageCount =
+		profile.ChatMessageCount + profile.GroupMessageCount
+
+	profile.NotificationCount, err =
+		CountUnreadNotifications(profileUserID)
+	if err != nil {
+		return profile, err
+	}
+
+	profile.UserStories, err =
+		GetStories(profile, followedUsers)
+	if err != nil {
+		return profile, err
+	}
+
+	return profile, nil
 }
 
-func UpdateProfile(user_id int64, username, firstname, lastname, about, privacy string) error {
-	_, err := DB.Exec("UPDATE users SET username = ?, firstname = ?, lastname = ?, privacy = ?, about = ? WHERE id = ?", username, firstname, lastname, privacy, about, user_id)
+func UpdateProfile(userID int64, username, firstName, lastName, bio, privacyLevel string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	_, err := Database.Exec(`
+		UPDATE users SET username = ?, firstname = ?, lastname = ?, privacy = ?, about = ? WHERE id = ?
+	`, username, firstName, lastName, privacyLevel, bio, userID)
+
 	return err
 }
