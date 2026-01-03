@@ -1,119 +1,279 @@
 package database
 
 import (
-	structs "social-network/data"
+	"database/sql"
+	"fmt"
+	"sync"
 	"time"
+
+	structs "social-network/data"
 )
 
-func GetConnections(user_id, offset int64) ([]structs.User, error) {
-	rows, err := DB.Query("SELECT DISTINCT u.id, u.username, u.firstname, u.lastname, u.avatar FROM users u JOIN follows f ON (u.id = f.follower_id OR u.id = f.following_id) WHERE (f.follower_id  = ? OR f.following_id = ?) LIMIT ? OFFSET ?", user_id, user_id, 10, offset)
+var mu sync.Mutex
+
+func FetchUserConnections(userID int64) ([]structs.User, error) {
+	rows, err := Database.Query(
+		`SELECT DISTINCT u.id, u.username, u.firstname, u.lastname, u.avatar, u.privacy
+		 FROM users u
+		 JOIN messages m ON (u.id = m.sender_id OR u.id = m.receiver_id)
+		 WHERE (m.sender_id = ? OR m.receiver_id = ?)
+		 AND m.group_id = 0
+		 GROUP BY u.id
+		 ORDER BY MAX(m.created_at) DESC`,
+		userID, userID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var connections []structs.User
+
 	for rows.Next() {
-		var connection structs.User
-		err = rows.Scan(&connection.ID, &connection.Username, &connection.FirstName, &connection.LastName, &connection.Avatar)
+		var user structs.User
+		if err := rows.Scan(
+			&user.UserID,
+			&user.Username,
+			&user.FirstName,
+			&user.LastName,
+			&user.AvatarURL,
+			&user.PrivacyLevel,
+		); err != nil {
+			return nil, err
+		}
+
+		user.IsFollowing, err = IsUserFollowing(userID, user.UserID)
 		if err != nil {
 			return nil, err
 		}
-		connection.Message.TotalMessages, err = GetCountConversationMessages(connection.ID, user_id)
-		if err != nil {
-			return nil, err
-		}
-		if connection.ID != user_id {
-			connections = append(connections, connection)
+
+		user.IsOnline = structs.ConnectedClients[user.UserID] != nil
+
+		if user.UserID != userID {
+			user.MessageCount, err = CountConversationUnreadMessages(user.UserID, userID, 0)
+			if err != nil {
+				return nil, err
+			}
+			connections = append(connections, user)
 		}
 	}
+
 	return connections, nil
 }
 
-func SendMessage(sender_id, receiver_id, group_id int64, content, image string) error {
-	if group_id != 0 {
-		_, err := DB.Exec("INSERT INTO group_messages (sender_id, group_id, message, status) VALUES (?, ?, ?, ?)", sender_id, group_id, content, "unread")
+func CreateMessage(senderID, receiverID, groupID int64, content, image string) error {
+	fmt.Println("sender, receiver, content", senderID, receiverID, content)
+	mu.Lock()
+	defer mu.Unlock()
+
+	unreadCount := 0
+	err := Database.QueryRow(
+		`SELECT messages_not_read
+		 FROM messages
+		 WHERE sender_id = ? AND receiver_id = ? AND group_id = ?
+		 ORDER BY created_at DESC
+		 LIMIT 1`,
+		senderID, receiverID, groupID,
+	).Scan(&unreadCount)
+
+	if err != nil && err.Error() != "sql: no rows in result set" {
 		return err
 	}
-	_, err := DB.Exec("INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)", sender_id, receiver_id, content)
+
+	if senderID == receiverID {
+		unreadCount = -1
+	}
+
+	_, err = Database.Exec(
+		`INSERT INTO messages (sender_id, receiver_id, group_id, content, messages_not_read)
+		 VALUES (?, ?, ?, ?, ?)`,
+		senderID, receiverID, groupID, content, unreadCount+1,
+	)
+
 	return err
 }
 
-func GetConversation(user_id, receiver_id, offset int64) ([]structs.Message, error) {
-	rows, err := DB.Query("SELECT m.id, u.username, u.avatar, m.content, m.created_at FROM messages m JOIN users u ON u.id = m.sender_id WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) ORDER BY m.created_at ASC LIMIT ? OFFSET ?", user_id, receiver_id, receiver_id, user_id, 10, offset)
+func FetchConversation(userID, otherUserID, offset int64) ([]structs.Message, error) {
+	rows, err := Database.Query(
+		`SELECT m.id, u.username, u.avatar, m.content, m.created_at
+		 FROM messages m
+		 JOIN users u ON u.id = m.sender_id
+		 WHERE ((m.sender_id = ? AND m.receiver_id = ?)
+		    OR (m.sender_id = ? AND m.receiver_id = ?))
+		 AND m.group_id = 0
+		 ORDER BY m.created_at DESC
+		 LIMIT ? OFFSET ?`,
+		userID, otherUserID, otherUserID, userID, 20, offset,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var chats []structs.Message
+
+	var messages []structs.Message
+
 	for rows.Next() {
-		var chat structs.Message
-		var date time.Time
-		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &date); err != nil {
+		var msg structs.Message
+		var createdAt time.Time
+
+		if err := rows.Scan(
+			&msg.MessageID,
+			&msg.Username,
+			&msg.AvatarURL,
+			&msg.Content,
+			&createdAt,
+		); err != nil {
 			return nil, err
 		}
-		chat.CreatedAt = TimeAgo(date)
-		chats = append(chats, chat)
+
+		msg.CreatedAt = TimeAgo(createdAt)
+		messages = append(messages, msg)
 	}
-	return chats, nil
+
+	return messages, nil
 }
 
-func GetGroupConversation(group_id, offset int64) ([]structs.Message, error) {
-	rows, err := DB.Query("SELECT c,id, u.username, u.avatar, c.message, c.chat_image, c.created_at FROM group_chats c JOIN users u ON u.id = c.sender_id WHERE c.group_id = ? ORDER BY c.created_at ASC LIMIT ? OFFSET ?", group_id, 10, offset)
+func FetchGroupConversation(groupID, userID, offset int64) ([]structs.Message, error) {
+	rows, err := Database.Query(
+		`SELECT c.id, u.username, u.avatar, c.content, c.sender_id, c.created_at
+		 FROM messages c
+		 JOIN users u ON u.id = c.sender_id
+		 WHERE c.group_id = ? AND c.receiver_id = ?
+		 ORDER BY c.created_at DESC
+		 LIMIT ? OFFSET ?`,
+		groupID, userID, 10, offset,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var chats []structs.Message
+
+	var messages []structs.Message
+
 	for rows.Next() {
-		var chat structs.Message
-		var date time.Time
-		if err := rows.Scan(&chat.ID, &chat.Username, &chat.Avatar, &chat.Content, &chat.Image, &date); err != nil {
+		var msg structs.Message
+		var createdAt time.Time
+
+		if err := rows.Scan(
+			&msg.MessageID,
+			&msg.Username,
+			&msg.AvatarURL,
+			&msg.Content,
+			&msg.SenderID,
+			&createdAt,
+		); err != nil {
 			return nil, err
 		}
 
-		chat.CreatedAt = TimeAgo(date)
-		chats = append(chats, chat)
+		msg.CurrentUserID = userID
+		msg.CreatedAt = TimeAgo(createdAt)
+		messages = append(messages, msg)
 	}
-	return chats, nil
+
+	return messages, nil
 }
 
-func GetCountUserMessages(user_id int64) (int64, int64, error) {
-	var count int64
-	var count2 int64
-	err := DB.QueryRow("SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND status = ?", user_id, "unread").Scan(&count)
-	if err != nil {
+func CountUserUnreadMessages(userID int64, groups []structs.Group) (int64, int64, error) {
+	var privateCount int64
+	var groupCount int64
+
+	err := Database.QueryRow(
+		`SELECT messages_not_read
+		 FROM messages
+		 WHERE receiver_id = ? AND group_id = ?
+		 ORDER BY created_at DESC
+		 LIMIT 1`,
+		userID, 0,
+	).Scan(&privateCount)
+
+	if err != nil && err.Error() != "sql: no rows in result set" {
 		return 0, 0, err
 	}
-	rows, err := DB.Query("SELECT messages_not_read FROM group_status_messages WHERE user_id = ?", user_id)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer rows.Close()
-	var count1 int64
-	for rows.Next() {
-		if err := rows.Scan(&count1); err != nil {
+
+	for _, group := range groups {
+		var unread int64
+		err = Database.QueryRow(
+			`SELECT messages_not_read
+			 FROM messages
+			 WHERE receiver_id = ? AND group_id == ?
+			 ORDER BY created_at DESC
+			 LIMIT 1`,
+			userID, group.GroupID,
+		).Scan(&unread)
+
+		if err != nil && err.Error() != "sql: no rows in result set" {
 			return 0, 0, err
 		}
-		count2 += count1
+
+		groupCount += unread
 	}
-	return count, count2, nil
+
+	return privateCount, groupCount, nil
 }
 
-func GetCountConversationMessages(sender_id, user_id int64) (int64, error) {
-	var count int64
-	err := DB.QueryRow("SELECT COUNT(*) FROM messages WHERE sender_id = ? AND receiver_id = ? AND status = ?", sender_id, user_id, "unread").Scan(&count)
-	return count, err
-}
+func CountConversationUnreadMessages(senderID, receiverID, groupID int64) (int64, error) {
+	var total int64
+	var rows *sql.Rows
+	var err error
 
-func ReadMessages(sender_id, reciever_id, group_id int64) error {
-	if group_id != 0 {
-		_, err := DB.Exec("UPDATE group_chats SET status = ? WHERE sender_id = ? AND group_id = ?", "read", sender_id, group_id)
-		if err != nil {
-			return err
+	if groupID == 0 {
+		rows, err = Database.Query(
+			`SELECT messages_not_read
+			 FROM messages
+			 WHERE sender_id = ? AND receiver_id = ? AND group_id = ?
+			 ORDER BY created_at DESC
+			 LIMIT 1`,
+			senderID, receiverID, groupID,
+		)
+	} else {
+		rows, err = Database.Query(
+			`SELECT messages_not_read
+			 FROM messages
+			 WHERE receiver_id = ? AND group_id = ?
+			 ORDER BY created_at DESC
+			 LIMIT 1`,
+			receiverID, groupID,
+		)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var count int64
+		if err := rows.Scan(&count); err != nil {
+			return 0, err
 		}
-		_, err = DB.Exec("UPDATE group_status_messages SET messages_not_read = 0 WHERE user_id = ? AND group_id = ?", reciever_id, group_id)
+		total += count
+	}
+
+	return total, nil
+}
+
+func MarkMessagesAsRead(senderID, receiverID, groupID int64) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	unreadCount, err := CountConversationUnreadMessages(senderID, receiverID, groupID)
+	if err != nil {
 		return err
 	}
-	_, err := DB.Exec("UPDATE messages SET status = ? WHERE receiver_id = ? AND sender_id = ?", "read", reciever_id, reciever_id)
+
+	if unreadCount > 0 {
+		if groupID == 0 {
+			_, err = Database.Exec(
+				"UPDATE messages SET messages_not_read = 0 WHERE receiver_id = ? AND sender_id = ? AND group_id = ?",
+				receiverID, senderID, groupID,
+			)
+		} else {
+			_, err = Database.Exec(
+				"UPDATE messages SET messages_not_read = 0 WHERE receiver_id = ? AND group_id = ?",
+				receiverID, groupID,
+			)
+		}
+	}
+
 	return err
 }
