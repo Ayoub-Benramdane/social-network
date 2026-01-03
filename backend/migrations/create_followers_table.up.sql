@@ -1,9 +1,10 @@
 -- +migrate Up
-CREATE TABLE IF NOT EXISTS follows (
+CREATE TABLE IF NOT EXISTS followers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     follower_id INTEGER NOT NULL,
-    following_id INTEGER NOT NULL,
-    FOREIGN KEY (following_id) REFERENCES users (id) ON DELETE CASCADE,
+    followed_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (followed_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (follower_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE (follower_id, following_id)
+    UNIQUE (follower_id, followed_id)
 );

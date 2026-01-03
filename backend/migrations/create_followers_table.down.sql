@@ -1,2 +1,2 @@
 -- +migrate Down
-DROP TABLE IF EXISTS follows;
+DROP TABLE IF EXISTS followers;

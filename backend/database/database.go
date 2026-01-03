@@ -8,40 +8,39 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-var DB *sql.DB
+var Database *sql.DB
 
-func InitDB() error {
+func InitializeDatabase() error {
 	var err error
-	DB, err = sql.Open("sqlite3", "./data/social-network.db")
+
+	Database, err = sql.Open("sqlite3", "./data/social-network.db")
 	if err != nil {
 		return err
 	}
 
-	_, err = DB.Exec(`
-        PRAGMA foreign_keys = ON
-    `)
+	_, err = Database.Exec(`PRAGMA foreign_keys = ON`)
 	if err != nil {
 		return err
 	}
 
-	err = applyMigrations()
-	if err != nil {
+	if err := runMigrations(); err != nil {
 		return err
 	}
 
-	return CreateCategories()
+	return SeedCategories()
 }
 
-func applyMigrations() error {
-	m := &migrate.FileMigrationSource{
+func runMigrations() error {
+	migrationSource := &migrate.FileMigrationSource{
 		Dir: "./migrations",
 	}
 
-	_, err := migrate.Exec(DB, "sqlite3", m, migrate.Up)
+	_, err := migrate.Exec(Database, "sqlite3", migrationSource, migrate.Up)
 	if err != nil {
-		log.Printf("Error applying migrations: %v", err)
+		log.Printf("Migration error: %v", err)
 		return err
 	}
-	log.Println("Migrations applied successfully!")
+
+	log.Println("Database migrations applied successfully")
 	return nil
 }
