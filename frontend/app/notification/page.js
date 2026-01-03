@@ -2,110 +2,72 @@
 import React, { useState, useEffect } from "react";
 import "../styles/NotificationPage.css";
 import NotificationCard from "../components/NotificationCard";
-import Navbar from "../components/NavBar";
+import { useRouter } from "next/navigation";
 
 export default function NotificationPage() {
-  const [activeTab, setActiveTab] = useState("all");
-  const [posts, setPosts] = useState([]);
-  const [homeData, setHomeData] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
-  const notificationse = [
-    {
-      type: "request",
-      avatar: "./avatars/lionel-messi_imago1019567000h.jpg",
-      name: "Amine Dinani",
-      action: "wants to follow",
-      target: "your profile",
-      time: "5 min ago",
-      hasActions: true,
-      unread: true,
-    },
-    {
-      type: "like",
-      avatar: "./avatars/lionel-messi_imago1019567000h.jpg",
-      name: "Amine Dinani",
-      action: "liked",
-      target: "your post",
-      time: "46 min ago",
-      hasActions: true,
-      unread: true,
-    },
-    {
-      type: "request",
-      avatar: "./avatars/lionel-messi_imago1019567000h.jpg",
-      name: "Amine Dinani",
-      action: "liked",
-      target: "your post",
-      time: "46 min ago",
-      hasActions: true,
-      unread: false,
-    },
-  ];
+  const [isFetchingMore, setIsFetchingMore] = useState(true);
+  const router = useRouter();
+
+  const handleScroll = () => {
+    if (window.scrollY >= window.innerHeight * .7 &&
+      window.scrollY <= window.innerHeight * .7 + 50 &&
+      notifications.length % 20 === 0 && isFetchingMore) {
+      fetchNotifications(notifications.length);
+    }
+  }
 
   useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const response = await fetch("http://localhost:8404/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data === true) {
-            setIsLoggedIn(true);
-          } else {
-            setIsLoggedIn(false);
-          }
-        }
-      } catch (error) {
-        setError(true);
-        console.error("Error checking login status:", error);
-      }
-    };
-
-    checkLoginStatus();
+    fetchNotifications();
   }, []);
 
-  const fetchNotifications = async () => {
+  useEffect(() => {
+    if (!isFetchingMore && notifications.length % 20 != 0) return;
+
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [notifications]);
+
+  const fetchNotifications = async (offset = 0) => {
+    if (notifications.length % 20 != 0) return;
     try {
-      const response = await fetch("http://localhost:8404/notifications", {
-        method: "GET",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `http://localhost:8404/notifications?offset=${offset}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to fetch notifications");
 
       const data = await response.json();
-      console.log("Raw notifications from server:", data);
 
-      setNotifications(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        if (data.length < 20) {
+          setIsFetchingMore(false);
+        }
+        if (offset === 0) {
+          setNotifications(data);
+        } else {
+          setNotifications((prev) => [...prev, ...data]);
+        }
+      }
     } catch (error) {
       console.error("Error fetching notifications:", error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchNotifications();
-    //setNotifications((prev) => [data, ...prev]);
-
-    //connectSocket();
-    //if (data.type === "notification") {
-    //console.log("aaaaa");
-
-    //}
-    //subscribeToMessages((data) => {
-    //});
-  }, []);
 
   const markAllAsRead = async () => {
     try {
       const response = await fetch(
-        "http://localhost:8404/notifications/mark_all_as_read",
+        "http://localhost:8404/mark_notifications_as_read",
         {
           method: "POST",
           credentials: "include",
@@ -113,49 +75,65 @@ export default function NotificationPage() {
       );
 
       if (!response.ok) throw new Error("Failed to mark all as read");
-
-      const data = await response.json();
-      console.log("Rad all:", data);
-
-      setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+      fetchNotifications();
     } catch (error) {
       console.error("Error marking notifications as read:", error.message);
     }
   };
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchHomeData();
-    }
-  }, [isLoggedIn]);
-
-  const fetchHomeData = async () => {
+  const markAsRead = async (notification) => {
     try {
-      const response = await fetch("http://localhost:8404/home", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      const response = await fetch(
+        `http://localhost:8404/read_notification?id=${notification.notification_id}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );      
 
-      if (response.ok) {
-        const data = await response.json();
-        setHomeData(data);
-        setPosts(data.posts);
-        //console.log("Data received: ", data);
+      if (!response.ok) throw new Error("Failed to mark notification as read");
+
+      fetchNotifications();
+      if (
+        notification.type_notification === "follow" ||
+        notification.type_notification === "follow_request"
+      ) {
+        router.push('/profile?id=' + notification.user_id);
+      } else if (
+        notification.type_notification === "like" ||
+        notification.type_notification === "comment" ||
+        notification.type_notification === "save"
+      ) {
+        router.push('/post?id=' + notification.post_id);
+      } else if (
+        notification.type_notification === "event"
+      ) {
+        router.push('/event?id=' + notification.group_id + '&event=' + notification.event_id);
+      } else if (
+        notification.type_notification === "join_request" ||
+        notification.type_notification === "join"
+      ) {
+        router.push('/group?id=' + notification.group_id);
+      } else if (notification.type_notification === "group") {
+        router.push('/groups');
       }
     } catch (error) {
-      setError(true);
-
-      console.error("Error fetching posts:", error);
+      console.error("Error marking notification as read:", error.message);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="loadingContainer">
+        <div className="loadingSpinner"></div>
+        <p className="loadingText">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="notification-container">
       <div className="notification-card">
-        {homeData && <Navbar user={homeData.user} />}
         <div className="notification-header">
           <h1 className="notification-title">Notifications</h1>
           <button className="mark-read-button" onClick={markAllAsRead}>
@@ -163,46 +141,18 @@ export default function NotificationPage() {
           </button>
         </div>
 
-        <div className="tabs-container">
-          <TabButton
-            label="All"
-            count={2}
-            isActive={activeTab === "all"}
-            onClick={() => setActiveTab("all")}
-          />
-          <TabButton
-            label="Read"
-            isActive={activeTab === "read-notification"}
-            onClick={() => setActiveTab("read-notification")}
-          />
-          <TabButton
-            label="Not read"
-            isActive={activeTab === "not-read-notification"}
-            onClick={() => setActiveTab("not-read-notification")}
-          />
-        </div>
-
         <div className="notification-list">
-          {notifications.map((notification, index) => (
-            <NotificationCard key={index} notification={notification} />
-          ))}
+          {notifications.length
+            ? notifications.map((notification) => (
+              <NotificationCard
+                key={notification.notification_id}
+                notification={notification}
+                onClick={() => markAsRead(notification)}
+              />
+            ))
+            : ""}
         </div>
       </div>
     </div>
-  );
-}
-
-function TabButton({ label, count, isActive, onClick }) {
-  return (
-    <button
-      className={`tab-button ${isActive ? "tab-active" : ""}`}
-      onClick={onClick}
-    >
-      <div className="tab-content">
-        {label}
-        {count && <span className="tab-count">{count}</span>}
-      </div>
-      {isActive && <div className="tab-indicator"></div>}
-    </button>
   );
 }

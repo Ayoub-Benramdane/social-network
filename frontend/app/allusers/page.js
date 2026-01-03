@@ -1,143 +1,210 @@
 "use client";
-import { useState, useEffect } from "react";
-import "../styles/AllUsersPage.css";
+import React, { useState, useEffect } from "react";
+import styles from "../styles/AllUsersPage.module.css";
+import { handleFollow, handelAccept, handleReject } from "../functions/user";
 
 export default function AllUsersPage() {
   const [activeTab, setActiveTab] = useState("suggested");
   const [suggestedUsers, setSuggestedUsers] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState();
+  const [isLoading, setIsLoading] = useState(true);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  // const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    setSuggestedUsers([
-      {
-        user_id: 1,
-        name: "Alex Johnson",
-        username: "@alexj",
-        avatar: "/avatar.jpg",
-        bio: "Software Engineer | React Enthusiast",
-      },
-      {
-        user_id: 2,
-        name: "Sarah Williams",
-        username: "@sarahw",
-        avatar: "/avatar.jpg",
-        bio: "UX Designer based in San Francisco",
-      },
-      {
-        user_id: 3,
-        name: "Mike Chen",
-        username: "@mikec",
-        avatar: "/avatar.jpg",
-        bio: "Product Manager | Tech Writer",
-      },
-    ]);
-
-    setPendingRequests([
-      {
-        user_id: 4,
-        name: "Jamie Taylor",
-        username: "@jamiet",
-        avatar: "/avatar.jpg",
-        requested_at: "2 days ago",
-      },
-      {
-        user_id: 5,
-        name: "Chris Murphy",
-        username: "@chrism",
-        avatar: "/avatar.jpg",
-        requested_at: "1 week ago",
-      },
-      {
-        user_id: 5,
-        name: "Chris Murphy",
-        username: "@chrism",
-        avatar: "/avatar.jpg",
-        requested_at: "1 week ago",
-      },
-      {
-        user_id: 5,
-        name: "Chris Murphy",
-        username: "@chrism",
-        avatar: "/avatar.jpg",
-        requested_at: "1 week ago",
-      },
-    ]);
-
-    setLoading(false);
+    fetchUsers("suggested");
   }, []);
 
+  const fetchUsers = async (type) => {
+    // setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `http://localhost:8404/suggested_users?type=${type}&offset=0`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (type === "suggested") {
+          setSuggestedUsers(data);
+        } else if (type === "pending") {
+          setPendingRequests(data);
+        } else if (type === "received") {
+          setReceivedRequests(data);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || `Failed to fetch ${type} users.`);
+      }
+    } catch (error) {
+      setError(`Network error while fetching ${type} users.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAcceptRequest = async (userId) => {
+    try {
+      await handelAccept(userId, 0);
+      setReceivedRequests(
+        receivedRequests.filter((user) => user.user_id !== userId)
+      );
+    } catch (error) {
+      setError("Failed to accept request. Please try again.");
+    }
+  };
+
+  const handleRejectRequest = async (userId) => {
+    try {
+      await handleReject(userId, 0);
+      setReceivedRequests(
+        receivedRequests.filter((user) => user.user_id !== userId)
+      );
+    } catch (error) {
+      setError("Failed to reject request. Please try again.");
+    }
+  };
+
+  const handleCancelRequest = async (userId) => {
+    try {
+      await handleFollow(userId, 0);
+      setPendingRequests((prev) =>
+        prev.filter((user) => user.user_id !== userId)
+      );
+    } catch (error) {
+      setError("Failed to cancel request. Please try again.");
+    }
+  };
+
+  const handleFollowUser = async (userId) => {
+    try {
+      await handleFollow(userId, 0);
+      setSuggestedUsers((prev) =>
+        prev.filter((user) => user.user_id !== userId)
+      );
+    } catch (error) {
+      setError("Failed to follow user. Please try again.");
+    }
+  };
+
+  {isLoading && (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner}>Loading...</div>
+      </div>
+    )
+  }
+
+  // if (loading) {
+  //   return (
+  //     <div className={styles.loadingContainer}>
+  //       <div className={styles.loadingSpinner}></div>
+  //       <p className={styles.loadingText}>Loading...</p>
+  //     </div>
+  //   );
+  // }
+
   return (
-    <div className="all-users-container">
-      <div className="all-users-header">
+    <div className={styles.allUsersContainer}>
+      <div className={styles.allUsersHeader}>
         <h1>Discover People</h1>
       </div>
 
-      <div className="tabs">
+      <div className={styles.tabs}>
         <button
-          className={`tab-button ${activeTab === "suggested" ? "active" : ""}`}
-          onClick={() => setActiveTab("suggested")}
+          className={`${styles.tabButton} ${activeTab === "suggested" ? styles.active : ""
+            }`}
+          onClick={() => {
+            setActiveTab("suggested");
+            fetchUsers("suggested");
+          }}
         >
           Suggested Users
-          {suggestedUsers.length > 0 && (
-            <span className="tab-count">{suggestedUsers.length}</span>
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === "pending" ? styles.active : ""
+            }`}
+          onClick={() => {
+            setActiveTab("pending");
+            fetchUsers("pending");
+          }}
+        >
+          Pending Requests
+          {pendingRequests && pendingRequests.length > 0 && (
+            <span className={styles.tabCount}>{pendingRequests.length}</span>
           )}
         </button>
         <button
-          className={`tab-button ${activeTab === "pending" ? "active" : ""}`}
-          onClick={() => setActiveTab("pending")}
+          className={`${styles.tabButton} ${activeTab === "received" ? styles.active : ""
+            }`}
+          onClick={() => {
+            setActiveTab("received");
+            fetchUsers("received");
+          }}
         >
-          Pending Requests
-          {pendingRequests.length > 0 && (
-            <span className="tab-count">{pendingRequests.length}</span>
-          )}
+          Received Requests
+          {receivedRequests
+            ? receivedRequests.length > 0 && (
+              <span className={styles.tabCount}>
+                {receivedRequests.length}
+              </span>
+            )
+            : null}
         </button>
       </div>
 
-      <div className="tab-content">
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Loading users...</p>
+      <div className={styles.tabContent}>
+        {isLoading ? (
+          <div className={styles.loadingState}>
+            <div className={styles.loadingSpinner}></div>
+            <p className={styles.loadingText}>Loading users...</p>
+          </div>
+        ) : error ? (
+          <div className={styles.errorContainer}>
+            <div className={styles.errorIcon}>!</div>
+            <h2 className={styles.errorTitle}>Error loading users</h2>
+            <p className={styles.errorMessage}>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className={styles.retryButton}
+            >
+              Try Again
+            </button>
           </div>
         ) : activeTab === "suggested" ? (
-          <div className="suggested-users-list">
-            {suggestedUsers.length === 0 ? (
-              <div className="empty-state">
-                {searchQuery ? (
-                  <>
-                    <p className="empty-title">No users found</p>
-                    <p className="empty-description">
-                      No users match your search "{searchQuery}"
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="empty-title">No suggested users</p>
-                    <p className="empty-description">
-                      We'll suggest users based on your interests and activity
-                    </p>
-                  </>
-                )}
+          <div className={styles.suggestedUsersList}>
+            {!suggestedUsers || suggestedUsers.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyTitle}>No suggested users</p>
+                <p className={styles.emptyDescription}>
+                  We'll suggest users based on your interests and activity
+                </p>
               </div>
             ) : (
               suggestedUsers.map((user) => (
-                <div key={user.user_id} className="user-card">
-                  <div className="user-info-container">
+                <div key={user.user_id} className={styles.userCard}>
+                  <div className={styles.userInfoContainer}>
                     <img
-                      src={user.avatar || "/avatar.jpg"}
+                      src={user.avatar || "/inconnu/avatar.png"}
                       alt={user.name}
-                      className="user-avatar"
+                      className={styles.userAvatar}
                     />
-                    <div className="user-details">
-                      <h3 className="user-name">{user.name}</h3>
-                      <p className="user-username">{user.username}</p>
-                      {user.bio && <p className="user-bio">{user.bio}</p>}
+                    <div className={styles.userDetails}>
+                      <h3 className={styles.userName}>{user.name}</h3>
+                      <p className={styles.userUsername}>{user.username}</p>
+                      {user.bio && <p className={styles.userBio}>{user.bio}</p>}
                     </div>
                   </div>
                   <button
-                    className="follow-button"
-                    onClick={() => handleFollow(user.user_id)}
+                    className={styles.followButton}
+                    onClick={() => handleFollowUser(user.user_id)}
                   >
                     Follow
                   </button>
@@ -145,49 +212,76 @@ export default function AllUsersPage() {
               ))
             )}
           </div>
-        ) : (
-          <div className="pending-requests-list">
-            {pendingRequests.length === 0 ? (
-              <div className="empty-state">
-                {searchQuery ? (
-                  <>
-                    <p className="empty-title">No requests found</p>
-                    <p className="empty-description">
-                      No pending requests match your search "{searchQuery}"
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="empty-title">No pending requests</p>
-                    <p className="empty-description">
-                      When users request to follow you, they'll appear here
-                    </p>
-                  </>
-                )}
+        ) : activeTab === "pending" ? (
+          <div className={styles.pendingRequestsList}>
+            {!pendingRequests || pendingRequests?.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyTitle}>No pending requests</p>
+                <p className={styles.emptyDescription}>
+                  When you request to follow someone, they'll appear here
+                </p>
               </div>
             ) : (
               pendingRequests.map((request) => (
-                <div key={request.user_id} className="user-card">
-                  <div className="user-info-container">
+                <div key={request.user_id} className={styles.userCard}>
+                  <div className={styles.userInfoContainer}>
                     <img
-                      src={request.avatar || "/avatar.jpg"}
+                      src={request.avatar || "/inconnu/avatar.png"}
                       alt={request.name}
-                      className="user-avatar"
+                      className={styles.userAvatar}
                     />
-                    <div className="user-details">
-                      <h3 className="user-name">{request.name}</h3>
-                      <p className="user-username">{request.username}</p>
-                      <p className="request-time">
-                        Requested {request.requested_at}
-                      </p>
+                    <div className={styles.userDetails}>
+                      <h3 className={styles.userName}>{request.name}</h3>
+                      <p className={styles.userUsername}>{request.username}</p>
                     </div>
                   </div>
-                  <div className="request-actions">
+                  <div className={styles.requestActions}>
                     <button
-                      className="reject-button"
+                      className={styles.cancelRequestButton}
                       onClick={() => handleCancelRequest(request.user_id)}
                     >
                       Cancel Request
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className={styles.receivedRequestsList}>
+            {!receivedRequests || receivedRequests.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyTitle}>No received requests</p>
+                <p className={styles.emptyDescription}>
+                  When users request to follow you, they'll appear here
+                </p>
+              </div>
+            ) : (
+              receivedRequests.map((request) => (
+                <div key={request.user_id} className={styles.userCard}>
+                  <div className={styles.userInfoContainer}>
+                    <img
+                      src={request.avatar || "/inconnu/avatar.png"}
+                      alt={request.name}
+                      className={styles.userAvatar}
+                    />
+                    <div className={styles.userDetails}>
+                      <h3 className={styles.userName}>{request.name}</h3>
+                      <p className={styles.userUsername}>{request.username}</p>
+                    </div>
+                  </div>
+                  <div className={styles.requestActions}>
+                    <button
+                      className={styles.acceptButton}
+                      onClick={() => handleAcceptRequest(request.user_id)}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      className={styles.rejectButton}
+                      onClick={() => handleRejectRequest(request.user_id)}
+                    >
+                      Reject
                     </button>
                   </div>
                 </div>

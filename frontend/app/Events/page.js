@@ -1,364 +1,378 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "../components/NavBar";
-import EventCard from "../components/EventCard";
 import EventFormModal from "../components/EventFormModal";
-import "../styles/EventsPage.css";
+import styles from "../styles/EventsPage.module.css";
+import useInfiniteScroll from "../components/useInfiniteScroll";
+import CardOfEvent from "../components/CardOfEvent";
 
 export default function EventsPage() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("my-events");
   const [showEventForm, setShowEventForm] = useState(false);
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [homeData, setHomeData] = useState(null);
-  // const [filteredEvents, setFilteredEvents] = useState([]);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMoreEvents, setHasMoreEvents] = useState(true);
+  const [error, setError] = useState(null);
+  const [isDisabled, setIsDisabled] = useState(false);
+  const router = useRouter();
 
+  const eventsGridRef = useRef(null);
 
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const response = await fetch("http://localhost:8404/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setIsLoggedIn(data === true);
-        }
-      } catch (error) {
-        console.error("Error checking login status:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkLoginStatus();
-  }, []);
-
-  const fetchEvents = async (type) => {
+  const fetchEvents = async (type, currentOffset = 0) => {
+    setError(null);
     try {
       const response = await fetch(
-        `http://localhost:8404/events?type=${type}`,
+        `http://localhost:8404/events?type=${type}&offset=${currentOffset}`,
         {
           method: "GET",
           credentials: "include",
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch events.");
+      }
 
+      const data = await response.json();
+      console.log("Fetched events:", data);
+      // console.log("Type:", type);
+
+      if (currentOffset === 0) {
         setEvents(data);
-        // setFilteredEvents(data);
+      } else {
+        setEvents((prev) => [...prev, ...data]);
       }
+
+      if (data?.length === 0 || data?.length < 10) {
+        setHasMoreEvents(false);
+      } else {
+        setHasMoreEvents(true);
+      }
+      return data;
     } catch (error) {
-      console.error("Error fetching events:", error);
+      setError(error.message || "An unexpected error occurred.");
+      setHasMoreEvents(false);
+      return [];
+    } finally {
+      setIsLoading(false);
+      setIsFetchingMore(false);
     }
   };
+
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchEvents("my-events");
-      fetchHomeData();
+    setIsLoading(true);
+    fetchEvents("my-events", 0);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsLoading(true);
+      setEvents([]);
+      setHasMoreEvents(true);
+      fetchEvents(activeTab, 0);
     }
-  }, [isLoggedIn]);
+  }, [activeTab]);
 
-  //useEffect(() => {
-  //if (isLoggedIn) {
-  //fetchHomeData();
-
-  //setEvents(sampleEvents);
-  //setFilteredEvents(sampleEvents);
-  // }
-  //}, [isLoggedIn]);
-
-  const fetchHomeData = async () => {
-    try {
-      const response = await fetch("http://localhost:8404/home", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setHomeData(data);
+  useInfiniteScroll({
+    fetchMoreCallback: async () => {
+      if (!isFetchingMore && hasMoreEvents) {
+        setIsFetchingMore(true);
+        await fetchEvents(activeTab, events?.length);
       }
-    } catch (error) {
-      console.error("Error fetching home data:", error);
-    }
-  };
+    },
+    containerRef: eventsGridRef,
+    isFetching: isFetchingMore,
+    hasMore: hasMoreEvents,
+  });
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-
-    if (tab === "my-events") {
-      fetchEvents("my-events");
-      // setFilteredEvents(events.filter((event) => event.is_attending));
-    } else if (tab === "discover") {
-      fetchEvents("discover");
-
-      // setFilteredEvents(events.filter((event) => !event.is_attending));
-    }
-    // else {
-    //   setFilteredEvents(events);
-    // }
   };
 
-  // const handleSearch = (e) => {
-  //   const query = e.target.value.toLowerCase();
-  //   setSearchQuery(query);
-
-  //   let filtered;
-  //   if (activeTab === "my-events") {
-  //     filtered = events.filter(
-  //       (event) =>
-  //         event.is_attending &&
-  //         (event.title.toLowerCase().includes(query) ||
-  //           event.location.toLowerCase().includes(query) ||
-  //           event.description.toLowerCase().includes(query))
-  //     );
-  //   } else if (activeTab === "discover") {
-  //     filtered = events.filter(
-  //       (event) =>
-  //         !event.is_attending &&
-  //         (event.title.toLowerCase().includes(query) ||
-  //           event.location.toLowerCase().includes(query) ||
-  //           event.description.toLowerCase().includes(query))
-  //     );
-  //   } else {
-  //     filtered = events.filter(
-  //       (event) =>
-  //         event.title.toLowerCase().includes(query) ||
-  //         event.location.toLowerCase().includes(query) ||
-  //         event.description.toLowerCase().includes(query)
-  //     );
-  //   }
-
-  //   setFilteredEvents(filtered);
-  // };
-
   const handleEventCreated = (newEvent) => {
-    setEvents((prevEvents) => [newEvent, ...prevEvents]);
-    setFilteredEvents((prevFiltered) => [newEvent, ...prevFiltered]);
+    setActiveTab("discover");
+    fetchEvents(activeTab, 0);
+  };
+
+  const handleInterestedClick = async (eventId, groupId, type) => {
+    // setIsDisabled(true);
+
+    try {
+      const response = await fetch("http://localhost:8404/join_to_event", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          group_id: groupId,
+          event_id: eventId,
+          type: type,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Failed to join/leave event.");
+      console.log(eventId, type);
+
+      setEvents(events.filter((event) => event.event_id !== eventId));
+      // setEvents((prev) =>
+      //   prev.map((e) =>
+      //     e.event_id === eventId ? { ...e, is_attending: !e.is_attending } : e
+      //   )
+      // );
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading events...</p>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner}></div>
+        <p className={styles.loadingText}>Loading events...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.errorContainer}>
+        <div className={styles.errorIcon}>!</div>
+        <h2 className={styles.errorTitle}>Error loading events</h2>
+        <p className={styles.errorMessage}>{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className={styles.retryButton}
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="events-page-container">
-      {homeData && <Navbar user={homeData.user} />}
-
-      <div className="events-page-content">
-        <div className="events-header">
+    <div className={styles.eventsPageContainer}>
+      <div className={styles.eventsPageContent}>
+        <div className={styles.eventsHeader}>
           <h1>Events</h1>
           <button
-            className="create-event-btn"
+            className={styles.createEventBtn}
             onClick={() => setShowEventForm(true)}
           >
             + Create Event
           </button>
         </div>
 
-        <div className="events-tabs">
+        <div className={styles.eventsTabs}>
           <button
-            className={`tab-button ${
-              activeTab === "my-events" ? "active-tab" : ""
-            }`}
+            className={`${styles.tabButton} ${
+              activeTab === "my-events" ? styles.activeTab : ""
+              }`}
             onClick={() => handleTabChange("my-events")}
           >
             My Events
           </button>
           <button
-            className={`tab-button ${
-              activeTab === "discover" ? "active-tab" : ""
-            }`}
+            className={`${styles.tabButton} ${
+              activeTab === "discover" ? styles.activeTab : ""
+              }`}
             onClick={() => handleTabChange("discover")}
           >
             Discover
           </button>
-          {/* <button
-            className={`tab-button ${activeTab === "all" ? "active-tab" : ""}`}
-            onClick={() => handleTabChange("all")}
-          >
-            All Events
-          </button> */}
         </div>
 
-
-        <div className="events-grid">
+        <div className={styles.eventsGrid} ref={eventsGridRef}>
           {events?.length > 0 ? (
             events.map((event) => (
-              <div key={event.id} className="event-card-container">
-                <div className="event-card-wrapper">
-                  {/* <div className="event-date-badge">
-            <span className="event-month">
-              {new Date(event.start_date).toLocaleString("default", {
-                month: "short",
-              })}
-            </span>
-            <span className="event-day">
-              {new Date(event.start_date).getDate()}
-            </span>
-            <span className="event-year">
-              {new Date(event.start_date).getFullYear()}
-            </span>
-          </div> */}
+              <CardOfEvent
+                key={event.event_id}
+                event={event}
+                handleInterestedClick={handleInterestedClick}
+                going={event.is_attending}
+              />
+              // <div key={event.event_id} className={styles.eventCardContainer}>
+              //   <div className={styles.eventCardWrapper}>
+              //     <div className={styles.eventCardContent}>
+              //       <h3 className={styles.eventTitle}>{event.title}</h3>
 
-                  <div className="event-card-content">
-                    <h3 className="event-title">{event.title}</h3>
+              //       <p className={styles.eventInfo}>
+              //         <svg
+              //           width="16"
+              //           height="16"
+              //           viewBox="0 0 24 24"
+              //           fill="none"
+              //           xmlns="http://www.w3.org/2000/svg"
+              //         >
+              //           <path
+              //             d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //           <circle
+              //             cx="9"
+              //             cy="7"
+              //             r="4"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //         </svg>
+              //         <span className={styles.eventInfoText}>
+              //           {event.username}
+              //         </span>
+              //       </p>
 
-                    <p className="event-organizer">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <circle
-                          cx="9"
-                          cy="7"
-                          r="4"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {event.organizer}
-                    </p>
+              //       <p className={styles.eventInfo}>
+              //         <svg
+              //           width="16"
+              //           height="16"
+              //           viewBox="0 0 24 24"
+              //           fill="none"
+              //           xmlns="http://www.w3.org/2000/svg"
+              //         >
+              //           <path
+              //             d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //           <circle
+              //             cx="12"
+              //             cy="10"
+              //             r="3"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //         </svg>
+              //         <span className={styles.eventInfoText}>
+              //           {event.location}
+              //         </span>
+              //       </p>
 
-                    <p className="event-location">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <circle
-                          cx="12"
-                          cy="10"
-                          r="3"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {event.location}
-                    </p>
+              //       <p className={styles.eventInfo}>
+              //         <svg
+              //           width="16"
+              //           height="16"
+              //           viewBox="0 0 24 24"
+              //           fill="none"
+              //           xmlns="http://www.w3.org/2000/svg"
+              //         >
+              //           <circle
+              //             cx="12"
+              //             cy="12"
+              //             r="10"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //           <path
+              //             d="M12 6v6l4 2"
+              //             stroke="currentColor"
+              //             strokeWidth="2"
+              //             strokeLinecap="round"
+              //             strokeLinejoin="round"
+              //           />
+              //         </svg>
+              //         <span className={styles.eventInfoText}>
+              //           {new Date(event.start_date).toLocaleTimeString([], {
+              //             hour: "2-digit",
+              //             minute: "2-digit",
+              //           })}{" "}
+              //           -
+              //           {new Date(event.end_date).toLocaleTimeString([], {
+              //             hour: "2-digit",
+              //             minute: "2-digit",
+              //           })}
+              //         </span>
+              //       </p>
 
-                    <p className="event-time">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M12 6v6l4 2"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      {new Date(event.start_date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -
-                      {new Date(event.end_date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+              //       <p className={styles.eventDescription}>
+              //         {event.description}
+              //       </p>
 
-                    <p className="event-description">{event.description}</p>
-
-                    <div className="event-actions">
-                      {event.is_attending ? (
-                        <button className="event-action-btn attending">
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M20 6L9 17l-5-5"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          Attending
-                        </button>
-                      ) : (
-                        <button className="event-action-btn">Interested</button>
-                      )}
-
-                      <button className="event-details-btn">
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              //       <div className={styles.eventActions}>
+              //         {event.is_attending ? (
+              //           <button
+              //             className={`${styles.eventActionButton} ${styles.attending}`}
+              //           >
+              //             <svg
+              //               width="16"
+              //               height="16"
+              //               viewBox="0 0 24 24"
+              //               fill="none"
+              //               xmlns="http://www.w3.org/2000/svg"
+              //             >
+              //               <path
+              //                 d="M20 6L9 17l-5-5"
+              //                 stroke="currentColor"
+              //                 strokeWidth="2"
+              //                 strokeLinecap="round"
+              //                 strokeLinejoin="round"
+              //               />
+              //             </svg>
+              //             Going
+              //           </button>
+              //         ) : (
+              //           <>
+              //             <button
+              //               className={styles.eventActionButton}
+              //               // disabled={isDisabled}
+              //               onClick={() =>
+              //                 handleInterestedClick(
+              //                   event.event_id,
+              //                   event.group_id,
+              //                   "going"
+              //                 )
+              //               }
+              //             >
+              //               Going
+              //             </button>
+              //             <button
+              //               className={styles.eventDetailsBtn}
+              //               // disabled={isDisabled}
+              //               // onClick={() =>
+              //               //   router.push(
+              //               //     `/event?id=${event.group_id}&event=${event.event_id}`
+              //               //   )
+              //               // }
+              //               onClick={() =>
+              //                 handleInterestedClick(
+              //                   event.event_id,
+              //                   event.group_id,
+              //                   "not_going"
+              //                 )
+              //               }
+              //             >
+              //               Not Going
+              //             </button>
+              //           </>
+              //         )}
+              //       </div>
+              //     </div>
+              //   </div>
+              // </div>
             ))
           ) : (
-            <div className="no-events-message">
+            <div className={styles.noEventsMessage}>
               {activeTab === "my-events" ? (
                 <>
-                  <div className="empty-state-icon">📅</div>
+                  <div className={styles.emptyStateIcon}>📅</div>
                   <h3>You're not attending any events yet</h3>
                   <p>Discover upcoming events or create your own!</p>
                   <button
-                    className="discover-events-btn"
+                    className={styles.discoverEventsBtn}
                     onClick={() => handleTabChange("discover")}
                   >
                     Discover Events
@@ -366,17 +380,28 @@ export default function EventsPage() {
                 </>
               ) : activeTab === "discover" ? (
                 <>
-                  <div className="empty-state-icon">🔍</div>
+                  <div className={styles.emptyStateIcon}>🔍</div>
                   <h3>No events to discover right now</h3>
                   <p>Check back later or create your own event!</p>
                 </>
               ) : (
                 <>
-                  <div className="empty-state-icon">📅</div>
+                  <div className={styles.emptyStateIcon}>📅</div>
                   <h3>No events found</h3>
                   <p>Try adjusting your search or create a new event</p>
                 </>
               )}
+            </div>
+          )}
+          {isFetchingMore && hasMoreEvents && (
+            <div className={styles.loadingMoreMessage}>
+              <div className={styles.loadingSpinner}></div>
+              <p>Loading more events...</p>
+            </div>
+          )}
+          {!hasMoreEvents && events.length > 0 && (
+            <div className={styles.endOfEventsMessage}>
+              <p>You've reached the end of the events list.</p>
             </div>
           )}
         </div>
@@ -386,7 +411,7 @@ export default function EventsPage() {
         <EventFormModal
           onClose={() => setShowEventForm(false)}
           onEventCreated={handleEventCreated}
-          my_groups={[]}
+        // my_groups={my_groups}
         />
       )}
     </div>

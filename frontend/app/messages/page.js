@@ -1,407 +1,488 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import Navbar from "../components/NavBar";
-import "../../styles/MessagesPage.css";
 
-const Message = ({ message, isSent }) => {
-  return (
-    <div className={`message ${isSent ? "sent" : "received"}`}>
-      {!isSent && (
-        <div className="message-user-header">
-          <img
-            className="message-user-avatar"
-            src={message.avatar}
-            alt={message.username}
-          />
-          <p>{message.username}</p>
-        </div>
-      )}
-      <p className="message-content">{message.content}</p>
-      <span className="message-time">{message.created_at}</span>
-    </div>
-  );
-};
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import styles from "../styles/MessagesPage.module.css";
+import { addToListeners, removeFromListeners } from "../websocket/ws.js";
+import { websocket } from "../websocket/ws.js";
+import EmojiSection from "../components/EmojiSection";
 
-const UserCard = ({ user, isActive, onClick }) => {
-  return (
-    <li
-      className={`user-item ${isActive ? "active-user" : ""}`}
-      onClick={onClick}
-    >
-      <img
-        src={user.avatar}
-        className="user-avatar"
-        alt={user.username || user.name}
-      />
-      <div className="user-details">
-        <div className="user-info">
-          <h4 className="user-name">
-            {user.first_name
-              ? `${user.first_name} ${user.last_name}`
-              : user.name}
-          </h4>
-          <p className="user-username">
-            {user.username
-              ? `@${user.username}`
-              : user.total_members
+/* ===================== COMPONENTS ===================== */
+
+const Message = ({ message, isSent, messagesEndRef }) => (
+  <div
+    className={`${styles.message} ${isSent ? styles.sent : styles.received
+      }`}
+  >
+    {!isSent && (
+      <div className={styles.messageUserHeader}>
+        <img
+          className={styles.messageUserAvatar}
+          src={message.avatar || "/inconnu/avatar.png"}
+          alt={message.username}
+        />
+        <p>{message.username}</p>
+      </div>
+    )}
+    <p className={styles.messageContent}>{message.content}</p>
+    <span className={styles.messageTime}>{message.created_at}</span>
+    {messagesEndRef && <div ref={messagesEndRef} />}
+  </div>
+);
+
+const UserCard = ({ user, isActive, onClick }) => (
+  <li
+    className={`${styles.userItem} ${isActive ? styles.activeUser : ""
+      }`}
+    onClick={onClick}
+  >
+    <img
+      src={user.avatar || user.image || "/inconnu/avatar.png"}
+      className={styles.userAvatar}
+      alt={user.username || user.name}
+    />
+    <div className={styles.userDetails}>
+      <div className={styles.userInfo}>
+        <h4 className={styles.userName}>
+          {user.first_name
+            ? `${user.first_name} ${user.last_name}`
+            : user.name}
+        </h4>
+        <p className={styles.userUsername}>
+          {user.username
+            ? `@${user.username}`
+            : user.total_members
               ? `(${user.total_members}) Members`
               : ""}
-          </p>
-        </div>
-        {user.unread_count > 0 && (
-          <div className="unread-badge">{user.unread_count}</div>
-        )}
+        </p>
       </div>
-    </li>
-  );
-};
+      {user.total_messages > 0 && (
+        <div className={styles.unreadBadge}>
+          {user.total_messages}
+        </div>
+      )}
+    </div>
+  </li>
+);
+
+/* ===================== PAGE ===================== */
 
 export default function MessagesPage() {
-  const [activeTab, setActiveTab] = useState("friends");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const reqTab = searchParams.get("tab") || "friends";
+  const reqId = parseInt(searchParams.get("id") || 0);
+
+  const [activeTab, setActiveTab] = useState(reqTab);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [isFirstFetch, setIsFirstFetch] = useState(false);
+  const [openEmojiSection, setOpenEmojiSection] = useState(false);
+  const [scrollRein, setScrollRein] = useState(null);
+
   const messagesEndRef = useRef(null);
-  const [homeData, setHomeData] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const conversationRef = useRef(null);
 
+  /* ===================== SOCKET HANDLER ===================== */
 
-  const [users] = useState([
-    {
-      id: 1,
-      first_name: "John",
-      last_name: "Doe",
-      username: "johndoe",
-      avatar: "./avatars/user1.jpg",
-      unread_count: 3,
-    },
-    {
-      id: 2,
-      first_name: "Jane",
-      last_name: "Smith",
-      username: "janesmith",
-      avatar: "./avatars/user2.jpg",
-      unread_count: 1,
-    },
-    {
-      id: 3,
-      first_name: "Michael",
-      last_name: "Johnson",
-      username: "michaelj",
-      avatar: "./avatars/user3.jpg",
-      unread_count: 0,
-    },
-    {
-      id: 4,
-      first_name: "Emily",
-      last_name: "Williams",
-      username: "emilyw",
-      avatar: "./avatars/user4.jpg",
-      unread_count: 5,
-    },
-    {
-      id: 5,
-      first_name: "David",
-      last_name: "Brown",
-      username: "davidb",
-      avatar: "./avatars/user5.jpg",
-      unread_count: 2,
-    },
-  ]);
+  const handleMessage = useCallback(
+    async (msg) => {
+      if (!msg || !msg.type) return;
 
-  const [groups] = useState([
-    {
-      id: 101,
-      name: "Web Development",
-      image: "./avatars/group1.jpg",
-      total_members: 24,
-      unread_count: 7,
+      if (msg.type === "message") {
+        if (!msg.message_id) return;
+
+        if (
+          reqId &&
+          (reqId === msg.user_id ||
+            reqId === msg.group_id ||
+            msg.user_id === msg.current_user)
+        ) {
+          setMessages((prev) =>
+            prev.some(
+              (m) => m.message_id === msg.message_id
+            )
+              ? prev
+              : [...prev, msg]
+          );
+          setIsFirstFetch(true);
+        } else {
+          if (reqTab === "friends") {
+            setUsers((prev) =>
+              prev.map((u) =>
+                u.user_id === msg.user_id
+                  ? {
+                    ...u,
+                    total_messages:
+                      u.total_messages + 1,
+                  }
+                  : u
+              )
+            );
+          }
+
+          if (reqTab === "groups") {
+            setGroups((prev) =>
+              prev.map((g) =>
+                g.group_id === msg.group_id
+                  ? {
+                    ...g,
+                    total_messages:
+                      g.total_messages + 1,
+                  }
+                  : g
+              )
+            );
+          }
+        }
+      }
+
+      if (msg.type === "new_connection") {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.user_id === msg.user_id
+              ? { ...u, online: true }
+              : u
+          )
+        );
+      }
+
+      if (msg.type === "disconnection") {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.user_id === msg.user_id
+              ? { ...u, online: false }
+              : u
+          )
+        );
+      }
     },
-    {
-      id: 102,
-      name: "UI/UX Design",
-      image: "./avatars/group2.jpg",
-      total_members: 18,
-      unread_count: 3,
-    },
-    {
-      id: 103,
-      name: "JavaScript Enthusiasts",
-      image: "./avatars/group3.jpg",
-      total_members: 32,
-      unread_count: 0,
-    },
-    {
-      id: 104,
-      name: "React Developers",
-      image: "./avatars/group4.jpg",
-      total_members: 45,
-      unread_count: 12,
-    },
-  ]);
+    [reqId, reqTab]
+  );
+
+  /* ===================== SOCKET LISTENERS ===================== */
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    addToListeners("message", handleMessage);
+    addToListeners("new_connection", handleMessage);
+    addToListeners("disconnection", handleMessage);
+
+    return () => {
+      removeFromListeners("message", handleMessage);
+      removeFromListeners("new_connection", handleMessage);
+      removeFromListeners("disconnection", handleMessage);
+    };
+  }, [handleMessage]);
+
+  /* ===================== FETCH DATA ===================== */
+
+  useEffect(() => {
+    setActiveTab(reqTab);
+  }, [reqTab]);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchGroups();
+  }, []);
+
+  useEffect(() => {
+    setMessages([]);
+    setSelectedUser(null);
+    setScrollRein(null);
+
+    if (!reqId) return;
+
+    if (reqTab === "friends") handleUserSelect(reqId);
+    if (reqTab === "groups") findGroup(reqId);
+  }, [reqId, reqTab]);
+
+  /* ===================== SCROLL ===================== */
+
+  useEffect(() => {
+    if (!isFirstFetch) return;
+    messagesEndRef.current?.scrollIntoView();
+    setIsFirstFetch(false);
+  }, [messages, isFirstFetch]);
+
+  /* ===================== HELPERS ===================== */
+  const handleSeeProfile = () => {
+    if (!selectedUser) return;
+
+    if (selectedUser.user_id) {
+      router.push(`/profile?id=${selectedUser.user_id}`);
+    } else if (selectedUser.group_id) {
+      router.push(`/group?id=${selectedUser.group_id}`);
     }
-  }, [messages]);
+  }; "use client";
 
-  //   useEffect(() => {
-  //     if (users.length > 0 && !selectedUser) {
-  //       setSelectedUser(users[0]);
-  //       const initialMessages = [
-  //         {
-  //           id: 1,
-  //           content: "Hey there! How are you doing?",
-  //           username: users[0].username,
-  //           created_at: "10:30 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //         {
-  //           id: 2,
-  //           content: "I'm good, thanks for asking! How about you?",
-  //           username: "me",
-  //           created_at: "10:32 AM",
-  //           avatar: "./avatars/me.jpg",
-  //         },
-  //         {
-  //           id: 3,
-  //           content:
-  //             "I'm doing well too. Just working on some new features for the app.",
-  //           username: users[0].username,
-  //           created_at: "10:35 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //         {
-  //           id: 4,
-  //           content:
-  //             "That sounds interesting! What kind of features are you working on?",
-  //           username: "me",
-  //           created_at: "10:37 AM",
-  //           avatar: "./avatars/me.jpg",
-  //         },
-  //         {
-  //           id: 5,
-  //           content:
-  //             "I'm implementing a new messaging system with real-time updates.",
-  //           username: users[0].username,
-  //           created_at: "10:40 AM",
-  //           avatar: users[0].avatar,
-  //         },
-  //       ];
-  //       setMessages(initialMessages);
-  //     }
-  //   }, [users]);
 
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8404/connections",
+        { credentials: "include" }
+      );
+      setUsers(await res.json());
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const userMessages = [
-      {
-        id: 1,
-        content: `Hi there! This is a conversation with ${
-          user.first_name || user.name
-        }.`,
-        username: user.username || user.name,
-        created_at: "09:15 AM",
-        avatar: user.avatar || user.image,
-      },
-      {
-        id: 2,
-        content: "Hello! How can I help you today?",
-        username: "me",
-        created_at: "09:17 AM",
-        avatar: "./avatars/me.jpg",
-      },
-      {
-        id: 3,
-        content: "I wanted to discuss the latest project updates.",
-        username: user.username || user.name,
-        created_at: "09:20 AM",
-        avatar: user.avatar || user.image,
-      },
-      {
-        id: 4,
-        content: "Sure, I've been working on the new UI components.",
-        username: "me",
-        created_at: "09:22 AM",
-        avatar: "./avatars/me.jpg",
-      },
-      {
-        id: 5,
-        content: "That's great! Can you share some screenshots?",
-        username: user.username || user.name,
-        created_at: "09:25 AM",
-        avatar: user.avatar || user.image,
-      },
-    ];
+  const fetchGroups = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8404/groups?type=joined&offset=-1",
+        { credentials: "include" }
+      );
+      setGroups(await res.json());
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    setMessages(userMessages);
+  const handleUserSelect = async (id) => {
+    const res = await fetch(
+      `http://localhost:8404/profile?user_id=${id}`,
+      { credentials: "include" }
+    );
+    setSelectedUser(await res.json());
+    fetchUserMessages(id, 0);
+  };
+
+  const findGroup = async (id) => {
+    const group = groups.find((g) => g.group_id === id);
+    if (!group) return;
+    setSelectedUser(group);
+    fetchGroupMessages(id, 0);
+  };
+
+  const fetchUserMessages = async (id, offset) => {
+    const res = await fetch(
+      `http://localhost:8404/chats?id=${id}&offset=${offset}`,
+      { credentials: "include" }
+    );
+    const data = await res.json();
+    setMessages(data);
+    setIsFirstFetch(true);
+  };
+
+  const fetchGroupMessages = async (id, offset) => {
+    const res = await fetch(
+      `http://localhost:8404/chats_group?group_id=${id}&offset=${offset}`,
+      { credentials: "include" }
+    );
+    const data = await res.json();
+    setMessages(data);
+    setIsFirstFetch(true);
   };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
 
-    const message = {
-      id: Date.now(),
-      content: newMessage,
-      username: "me",
-      created_at: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      avatar: "./avatars/torfin.jpg",
-    };
-
-    setMessages([...messages, message]);
-
+    websocket.send(
+      JSON.stringify({
+        type: "message",
+        user_id: selectedUser.user_id || 0,
+        group_id: selectedUser.group_id || 0,
+        content: newMessage,
+      })
+    );
     setNewMessage("");
   };
-  
-  useEffect(() => {
-      const checkLoginStatus = async () => {
-        try {
-          const response = await fetch("http://localhost:8404/", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
-  
-          if (response.ok) {
-            const data = await response.json();
-            if (data === true) {
-              setIsLoggedIn(true);
-            } else {
-              setIsLoggedIn(false);
-            }
-          }
-        } catch (error) {
-          setError(true);
-          console.error("Error checking login status:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-  
-      checkLoginStatus();
-    }, []);
-  
-    useEffect(() => {
-      if (isLoggedIn) {
-        fetchHomeData();
-      }
-    }, [isLoggedIn]);
-  
-    const fetchHomeData = async () => {
-      try {
-        const response = await fetch("http://localhost:8404/home", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          setHomeData(data);
-          setPosts(data.posts);
-          console.log("Data received: ", data);
-        }
-      } catch (error) {
-        setError(true);
-  
-        console.error("Error fetching posts:", error);
-      }
-    };
+
+  const toggleEmojiSection = () => { setOpenEmojiSection(!openEmojiSection); };
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingSpinner}></div>
+        <p className={styles.loadingText}>Loading your profile...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="messages-page-container">
-       {homeData && <Navbar user={homeData.user} />}
+    <div className={styles.messagesPageContainer}>
 
-      <div className="messages-page-content">
-        <div className="messages-sidebar">
-          <div className="messages-header">
+
+      <div className={styles.messagesPageContent}>
+        <div className={styles.messagesSidebar}>
+          <div className={styles.messagesHeader}>
             <h2>Messages</h2>
+
           </div>
 
-          <div className="messages-tabs">
+          <div className={styles.messagesTabs}>
             <button
-              className={`tab-button ${
-                activeTab === "friends" ? "active-tab" : ""
-              }`}
-              onClick={() => setActiveTab("friends")}
+              className={`${styles.tabButton} ${activeTab === "friends" ? styles.activeTab : ""
+                }`}
+              onClick={() => router.push(`/messages?tab=friends`)}
             >
               Friends
             </button>
             <button
-              className={`tab-button ${
-                activeTab === "groups" ? "active-tab" : ""
-              }`}
-              onClick={() => setActiveTab("groups")}
+              className={`${styles.tabButton} ${activeTab === "groups" ? styles.activeTab : ""
+                }`}
+              onClick={() => router.push(`/messages?tab=groups`)}
             >
               Groups
             </button>
           </div>
 
-          <div className="search-messages">
+          {/* <div className={styles.searchMessages}>
             <input
               type="text"
               placeholder="Search messages..."
-              className="search-input"
+              className={styles.searchInput}
             />
-          </div>
+          </div> */}
 
-          <div className="users-list-container">
-            <ul className="users-list">
+          <div
+            className={styles.usersListContainer}
+          >
+            <ul className={styles.usersList}>
               {activeTab === "friends"
-                ? users.map((user) => (
-                    <UserCard
-                      key={user.id}
-                      user={user}
-                      isActive={selectedUser && selectedUser.id === user.id}
-                      onClick={() => handleUserSelect(user)}
-                    />
-                  ))
-                : groups.map((group) => (
-                    <UserCard
-                      key={group.id}
-                      user={group}
-                      isActive={selectedUser && selectedUser.id === group.id}
-                      onClick={() => handleUserSelect(group)}
-                    />
-                  ))}
+                ? users?.length > 0 &&
+                users.map((user) => (
+                  <UserCard
+                    key={user.user_id}
+                    user={user}
+                    isActive={
+                      selectedUser && selectedUser.user_id === user.user_id
+                    }
+                    onClick={() => {
+                      router.push(`/messages?tab=friends&id=${user.user_id}`);
+                    }}
+                  />
+                ))
+                : groups?.length > 0 &&
+                groups.map((group) => (
+                  <UserCard
+                    key={group.group_id}
+                    user={group}
+                    isActive={
+                      selectedUser && selectedUser.group_id === group.group_id
+                    }
+                    onClick={() => {
+                      router.push(`/messages?tab=groups&id=${group.group_id}`);
+                    }}
+                  />
+                ))}
+              {!users?.length && activeTab === "friends" && (
+                <div className={styles.noUsersMessage}>
+                  You have no chats yet.
+                </div>
+              )}
+              {!groups?.length && activeTab === "groups" && (
+                <div className={styles.noUsersMessage}>
+                  You haven't joined any groups yet.
+                </div>
+              )}
             </ul>
           </div>
         </div>
 
-        <div className="messages-main">
+        <div className={styles.messagesMain}>
           {selectedUser ? (
             <>
-              <div className="conversation-header">
-                <div className="conversation-user-info">
+              <div className={styles.conversationHeader}>
+                <div className={styles.conversationUserInfo}>
                   <img
-                    src={selectedUser.avatar || selectedUser.image}
+                    src={
+                      selectedUser.avatar ||
+                      selectedUser.image ||
+                      "/inconnu/avatar.png"
+                    }
                     alt={selectedUser.username || selectedUser.name}
-                    className="conversation-avatar"
+                    className={styles.conversationAvatar}
                   />
-                  <div className="conversation-user-details">
-                    <h3 className="conversation-user-name">
+                  <div className={styles.conversationUserDetails}>
+                    <h3 className={styles.conversationUserName}>
                       {selectedUser.first_name
                         ? `${selectedUser.first_name} ${selectedUser.last_name}`
                         : selectedUser.name}
                     </h3>
-                    <p className="conversation-user-status">
-                      <span className="status-dot online"></span>
-                      Online
-                    </p>
+                    {selectedUser.username && (
+                      <p className={styles.conversationUserStatus}>
+                        <span
+                          className={`${styles.statusDot} ${selectedUser.online ? styles.online : styles.offline
+                            }`}
+                        ></span>
+                        {selectedUser.online ? "Online" : "Offline"}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="conversation-actions">
-                  <button className="action-button">
+                <div className={styles.conversationActions}>
+                  <button
+                    className={styles.actionButton}
+                    onClick={handleSeeProfile}
+                  >
+                    See Profile &rarr;
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className={styles.conversationMessages}
+                ref={conversationRef}
+              >
+                {messages && messages.length > 0 ? (
+                  messages.map((message, index) => (
+                    <Message
+                      key={message.message_id}
+                      message={message}
+                      isSent={
+                        message.current_user
+                          ? message.user_id === message.current_user
+                          : message.username !== selectedUser.username
+                      }
+                      messagesEndRef={messages.length - 1 === index ? messagesEndRef : null}
+                    />
+                  ))
+                ) : (
+                  <div className={styles.noMessagesYet}>
+                    No messages in this conversation.
+                  </div>
+                )}
+                {/* <div ref={messagesEndRef} /> */}
+              </div>
+
+              {selectedUser.is_following ||
+                selectedUser.privacy === "public" ||
+                (selectedUser.role !== "guest" && selectedUser.group_id) ? (
+                <form
+                  className={styles.messageInputForm}
+                  onSubmit={handleSendMessage}
+                >
+
+                  <div className={styles.emojiToggle}>
+                    <button type="button" onClick={toggleEmojiSection}>
+                      😄
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                    }}
+                    className={styles.messageInput}
+                  />
+                  <button type="submit" className={styles.sendButton}>
                     <svg
                       width="20"
                       height="20"
@@ -410,73 +491,28 @@ export default function MessagesPage() {
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        d="M12 5V19M5 12H19"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
+                        fill="currentColor"
                       />
                     </svg>
-                    See Profile
                   </button>
+                  {openEmojiSection && (
+                    <EmojiSection
+                      onEmojiSelect={(emoji) => {
+                        setNewMessage((prev) => prev + emoji);
+                      }}
+                    />
+                  )}
+                </form>
+              ) : (
+                <div className={styles.messageInputDisabled}>
+                  <p>You are not allowed to send messages in this chat.</p>
                 </div>
-              </div>
-
-              <div className="conversation-messages">
-                {messages.map((message) => (
-                  <Message
-                    key={message.id}
-                    message={message}
-                    isSent={message.username === "me"}
-                  />
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-
-              <form className="message-input-form" onSubmit={handleSendMessage}>
-                {/* <button type="button" className="attachment-button">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button> */}
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="message-input"
-                />
-                <button type="submit" className="send-button">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </button>
-              </form>
+              )}
             </>
           ) : (
-            <div className="no-conversation-selected">
-              <div className="no-conversation-content">
+            <div className={styles.noConversationSelected}>
+              <div className={styles.noConversationContent}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="687"
